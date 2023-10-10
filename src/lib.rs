@@ -1,9 +1,9 @@
 // RTF parser for Text Editor
 // Support RTF version 1.9.1
 
-mod utils;
 mod lexer;
 mod parser;
+mod utils;
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
@@ -12,7 +12,7 @@ pub enum Token<'a> {
     OpeningBracket,
     ClosingBracket,
     SemiColon,
-    CRLF,  // Line-return \n
+    CRLF, // Line-return \n
     ControlSymbol(ControlSymbol<'a>),
 }
 
@@ -28,10 +28,16 @@ pub enum Property {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ControlWord<'a> {
+    Rtf,
+    Ansi,
+
+    FontNumber,
+    FontSize,
+
     Italic,
     Bold,
     Underline,
-    FontNumber,
+
     Unknown(&'a str),
 }
 
@@ -45,8 +51,10 @@ impl<'a> ControlWord<'a> {
         let mut suffix_index = 0;
         while let Some(c) = it.next() {
             match c {
-                '0'..='9' => { suffix_index += 1; }
-                _ => break
+                '0'..='9' => {
+                    suffix_index += 1;
+                }
+                _ => break,
             }
         }
 
@@ -55,15 +63,24 @@ impl<'a> ControlWord<'a> {
         let prefix = &input[..index];
         let suffix = &input[index..];
 
-        let property =
-            if suffix == "" { Property::None }
-            else { Property::Value(suffix.parse::<i32>().expect(&format!("[Lexer] Unable to parse {}", &suffix))) };
+        let property = if suffix == "" {
+            Property::None
+        } else {
+            Property::Value(
+                suffix
+                    .parse::<i32>()
+                    .expect(&format!("[Lexer] Unable to parse {}", &suffix)),
+            )
+        };
 
         let control_word = match prefix {
+            r"\rtf" => ControlWord::Rtf,
+            r"\ansi" => ControlWord::Ansi,
+            r"\f" => ControlWord::FontNumber,
+            r"\fs" => ControlWord::FontSize,
             r"\i" => ControlWord::Italic,
             r"\b" => ControlWord::Bold,
             r"\u" => ControlWord::Underline,
-            r"\f" => ControlWord::FontNumber,
             _ => ControlWord::Unknown(prefix),
         };
         return (control_word, property);
@@ -79,7 +96,7 @@ mod tests {
         let input = r"\rtf1";
         assert_eq!(
             ControlWord::from(input),
-            (ControlWord::Unknown("\\rtf"), Property::Value(1))
+            (ControlWord::Rtf, Property::Value(1))
         )
     }
 }

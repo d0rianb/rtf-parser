@@ -9,10 +9,17 @@ impl StrUtils for str {
         let mut first_whitespace_index = 0;
         let mut it = self.chars();
         while let Some(c) = it.next() {
-            if c.is_whitespace() { break } else { first_whitespace_index += 1; }
+            if c.is_whitespace() {
+                break;
+            } else {
+                first_whitespace_index += 1;
+            }
         }
         if first_whitespace_index > 0 && first_whitespace_index != self.len() {
-            (&self[0..first_whitespace_index], &self[first_whitespace_index + 1..])
+            (
+                &self[0..first_whitespace_index],
+                &self[first_whitespace_index + 1..],
+            )
         } else {
             (self, "")
         }
