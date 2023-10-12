@@ -1,11 +1,9 @@
 use crate::utils::StrUtils;
 use crate::{ControlWord, Token};
 
-pub struct Lexer<'a> {
-    src: &'a str,
-}
+pub struct Lexer;
 
-impl<'a> Lexer<'a> {
+impl Lexer {
     pub fn scan(src: &str) -> Vec<Token> {
         let mut it =src.chars();
         let mut tokens: Vec<Token> = vec![];
