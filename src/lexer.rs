@@ -5,7 +5,7 @@ pub struct Lexer;
 
 impl Lexer {
     pub fn scan(src: &str) -> Vec<Token> {
-        let mut it =src.chars();
+        let mut it = src.chars();
         let mut tokens: Vec<Token> = vec![];
         let mut slice_start_index = 0;
         let mut current_index = 0;
@@ -15,11 +15,9 @@ impl Lexer {
                 // Handle Escaped chars
                 // TODO: Handle char over code 127 for escaped chars
                 '{' | '}' | '\\' if previous_char == '\\' => {}
-                // End of slice chars
-                '{' | '}' | ';' | '.' | '\\' => {
-                    if slice_start_index < current_index
-                        && !(previous_char == '\\' && ['{', '}', '\\'].contains(&c))
-                    {
+                '{' | '}' | '\\' => {
+                    // End of slice chars
+                    if slice_start_index < current_index {
                         // Close slice
                         let slice = &src[slice_start_index..current_index];
                         // Get the corresponding token(s)
@@ -46,28 +44,50 @@ impl Lexer {
     }
 
     fn tokenize(slice: &str) -> Vec<Token> {
-        if slice.starts_with('\\') {
-            // Handle escaped chars
-            if slice[1..].starts_with(['{', '}', '\\']) {
-                return vec![Token::PlainText(&slice[1..])];
+        let mut starting_chars = slice.trim_matches(' ').chars().take(2);
+        return match (starting_chars.next(), starting_chars.next()) {
+            // If it start with \ : escaped text or control word
+            (Some('\\'), Some(c)) => match c {
+                '{' | '}' | '\\' => {
+                    // Handle escaped chars
+                    let tail = slice.get(1..).unwrap_or("");
+                    return vec![Token::PlainText(tail)];
+                }
+                '\n' => {
+                    // CRLF
+                    let mut ret = vec![Token::CRLF];
+                    if let Some(tail) = slice.get(2..) {
+                        if tail != "" {
+                            ret.push(Token::PlainText(tail))
+                        }
+                    }
+                    return ret;
+                }
+                'a'..='z' => {
+                    // Identify control word
+                    // ex: parse "\b Words in bold" -> (Token::ControlWord(ControlWord::Bold), Token::ControlWordArgumen("Words in bold")
+                    let (ident, tail) = slice.split_first_whitespace();
+                    let mut ret = vec![Token::ControlSymbol(ControlWord::from(ident))];
+                    if tail.len() > 0 {
+                        ret.push(Token::PlainText(tail));
+                    }
+                    return ret;
+                },
+                _ => vec![],
+            },
+            // Handle brackets
+            (Some('{'), None) => vec![Token::OpeningBracket],
+            (Some('}'), None) => vec![Token::ClosingBracket],
+            (Some('{'), Some(_)) => vec![Token::OpeningBracket, Token::PlainText(&slice[1..])],
+            (Some('}'), Some(_)) => vec![Token::ClosingBracket, Token::PlainText(&slice[1..])],
+            (None, None) => panic!("[Lexer] : Empty token {}", &slice),
+            // Else, it's plain text
+            _ => {
+                let text = slice.trim();
+                if text == "" { return vec![]; }
+                return vec![Token::PlainText(slice.trim())];
             }
-            // parse "\b Words in bold" -> (Token::ControlWord(ControlWord::Bold), Token::ControlWordArgumen("Words in bold")
-            let (ident, tail) = slice.split_first_whitespace();
-            let mut ret = vec![Token::ControlSymbol(ControlWord::from(ident))];
-            if tail.len() > 0 {
-                ret.push(Token::PlainText(tail));
-            }
-            return ret;
-        }
-
-        let single_token = match slice.trim() {
-            ";" => Token::SemiColon,
-            "{" => Token::OpeningBracket,
-            "}" => Token::ClosingBracket,
-            "\\n" => Token::CRLF,
-            _ => Token::PlainText(slice),
         };
-        return vec![single_token];
     }
 }
 
@@ -102,8 +122,7 @@ pub(crate) mod tests {
                 ControlSymbol((Unknown("\\fonttbl"), None)),
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((Unknown("\\fswiss"), None)),
-                PlainText("Helvetica"),
-                SemiColon,
+                PlainText("Helvetica;"),
                 ClosingBracket,
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((Unknown("\\pard"), None)),
@@ -136,19 +155,17 @@ if (a == b) \{\
                 ControlSymbol((FontSize, Value(24))),
                 ControlSymbol((Unknown("\\cf"), Value(0))),
                 PlainText("test de code "),
-                ControlSymbol((Unknown("\\"), None)),
+                CRLF,
                 PlainText("if (a == b) "),
                 PlainText("{"),
-                ControlSymbol((Unknown("\\"), None)),
-                PlainText("    test()"),
-                SemiColon,
-                ControlSymbol((Unknown("\\"), None)),
+                CRLF,
+                PlainText("    test();"),
+                CRLF,
                 PlainText("} else "),
                 PlainText("{"),
-                ControlSymbol((Unknown("\\"), None)),
-                PlainText("    return"),
-                SemiColon,
-                ControlSymbol((Unknown("\\"), None)),
+                CRLF,
+                PlainText("    return;"),
+                CRLF,
                 PlainText("}"),
                 ClosingBracket
             ],

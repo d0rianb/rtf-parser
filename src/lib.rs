@@ -1,5 +1,6 @@
 // RTF parser for Text Editor
 // Support RTF version 1.9.1
+// specification is available here : https://dokumen.tips/documents/rtf-specification.html
 
 mod lexer;
 mod parser;
@@ -11,7 +12,6 @@ pub enum Token<'a> {
     PlainText(&'a str),
     OpeningBracket,
     ClosingBracket,
-    SemiColon,
     CRLF, // Line-return \n
     ControlSymbol(ControlSymbol<'a>),
 }
