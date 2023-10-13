@@ -1,5 +1,6 @@
-use crate::Token;
 use std::collections::HashMap;
+
+use crate::Token;
 
 type FontRef<'a> = &'a str;
 
@@ -20,9 +21,7 @@ enum CharacterSet {
 }
 
 impl Default for CharacterSet {
-    fn default() -> Self {
-        CharacterSet::Ansi
-    }
+    fn default() -> Self { CharacterSet::Ansi }
 }
 
 #[allow(dead_code)]
@@ -39,9 +38,7 @@ enum FontFamily {
 }
 
 impl Default for FontFamily {
-    fn default() -> Self {
-        FontFamily::Nil
-    }
+    fn default() -> Self { FontFamily::Nil }
 }
 
 pub struct RTFHeader<'a> {
@@ -59,16 +56,8 @@ pub struct Parser;
 impl<'a> Parser {
     pub fn check_document_validity(tokens: &Vec<Token>) {
         // Check the document boundaries
-        assert_eq!(
-            tokens.first().expect("Unable to retrieve first token"),
-            &Token::OpeningBracket,
-            "Invalid first token : not a {{"
-        );
-        assert_eq!(
-            tokens.last().expect("Unable to retrieve last token"),
-            &Token::ClosingBracket,
-            "Invalid last token : not a }}"
-        );
+        assert_eq!(tokens.first().expect("Unable to retrieve first token"), &Token::OpeningBracket, "Invalid first token : not a {{");
+        assert_eq!(tokens.last().expect("Unable to retrieve last token"), &Token::ClosingBracket, "Invalid last token : not a }}");
     }
 
     pub fn parse(tokens: &Vec<Token>) {
@@ -87,9 +76,7 @@ impl<'a> Parser {
 
     pub fn parse_header(tokens: &Vec<Token>) {}
 
-    pub fn to_text(_tokens: &Vec<Token>) -> &'a str {
-        ""
-    }
+    pub fn to_text(_tokens: &Vec<Token>) -> &'a str { "" }
 }
 
 #[cfg(test)]
@@ -102,9 +89,7 @@ pub mod tests {
 
     #[test]
     fn parser_simple_test() {
-        let tokens = Lexer::scan(
-            r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#,
-        );
+        let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#);
         let parser = Parser::parse(&tokens);
 
         // assert_eq!(

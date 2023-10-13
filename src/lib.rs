@@ -66,11 +66,7 @@ impl<'a> ControlWord<'a> {
         let property = if suffix == "" {
             Property::None
         } else {
-            Property::Value(
-                suffix
-                    .parse::<i32>()
-                    .expect(&format!("[Lexer] Unable to parse {}", &suffix)),
-            )
+            Property::Value(suffix.parse::<i32>().expect(&format!("[Lexer] Unable to parse {}", &suffix)))
         };
 
         let control_word = match prefix {
@@ -94,9 +90,6 @@ mod tests {
     #[test]
     fn control_word_from_input_test() {
         let input = r"\rtf1";
-        assert_eq!(
-            ControlWord::from(input),
-            (ControlWord::Rtf, Property::Value(1))
-        )
+        assert_eq!(ControlWord::from(input), (ControlWord::Rtf, Property::Value(1)))
     }
 }

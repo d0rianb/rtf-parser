@@ -72,7 +72,7 @@ impl Lexer {
                         ret.push(Token::PlainText(tail));
                     }
                     return ret;
-                },
+                }
                 _ => vec![],
             },
             // Handle brackets
@@ -84,7 +84,9 @@ impl Lexer {
             // Else, it's plain text
             _ => {
                 let text = slice.trim();
-                if text == "" { return vec![]; }
+                if text == "" {
+                    return vec![];
+                }
                 return vec![Token::PlainText(slice.trim())];
             }
         };
@@ -101,17 +103,12 @@ pub(crate) mod tests {
     #[test]
     fn simple_tokenize_test() {
         let tokens = Lexer::tokenize(r"\b Words in bold");
-        assert_eq!(
-            tokens,
-            vec![ControlSymbol((Bold, None)), PlainText("Words in bold"),]
-        );
+        assert_eq!(tokens, vec![ControlSymbol((Bold, None)), PlainText("Words in bold"),]);
     }
 
     #[test]
     fn scan_entire_file_test() {
-        let tokens = Lexer::scan(
-            r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#,
-        );
+        let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#);
         assert_eq!(
             tokens,
             vec![
