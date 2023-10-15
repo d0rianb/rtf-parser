@@ -5,9 +5,10 @@
 mod lexer;
 mod parser;
 mod utils;
+mod header;
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Token<'a> {
     PlainText(&'a str),
     OpeningBracket,
@@ -18,7 +19,7 @@ pub enum Token<'a> {
 
 // Parameters for a control word
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Property {
     On,  // 1
     Off, // 0
@@ -26,11 +27,13 @@ pub enum Property {
     None, // No parameter
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ControlWord<'a> {
     Rtf,
     Ansi,
 
+    FontTable,
+    FontCharset,
     FontNumber,
     FontSize,
 
@@ -72,6 +75,8 @@ impl<'a> ControlWord<'a> {
         let control_word = match prefix {
             r"\rtf" => ControlWord::Rtf,
             r"\ansi" => ControlWord::Ansi,
+            r"\fonttbl" => ControlWord::FontTable,
+            r"\fcharset" => ControlWord::FontCharset,
             r"\f" => ControlWord::FontNumber,
             r"\fs" => ControlWord::FontSize,
             r"\i" => ControlWord::Italic,
