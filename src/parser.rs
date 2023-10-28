@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::mem;
-use std::ops::Add;
 
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
 use crate::{ControlWord, Property, Token};
-use crate::utils::StrUtils;
 
 const CONTROL_TABLE_TOKEN: Token<'static> = Token::ControlSymbol((ControlWord::FontTable, Property::None));
 
@@ -47,6 +45,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> RtfDocument<'a> {
+        self.check_document_validity();
         let mut document = RtfDocument::default();
         self.parse_ignore_groups();
         document.header = self.parse_header();
@@ -100,7 +99,7 @@ impl<'a> Parser<'a> {
     }
 
     // Consume token from cursor to <reference-token>
-    fn consume_tokens_until(&mut self, reference_token: Token<'a>) -> Vec<Token<'a>> {
+    fn _consume_tokens_until(&mut self, reference_token: Token<'a>) -> Vec<Token<'a>> {
         let mut ret = vec![];
         let token_type_id = mem::discriminant(&reference_token);
         while let Some(token) = self.consume_next_token() {
