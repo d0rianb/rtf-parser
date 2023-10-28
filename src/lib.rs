@@ -4,8 +4,12 @@
 
 mod lexer;
 mod parser;
-mod utils;
 mod header;
+mod utils;
+
+// expose the lexer and the parser
+pub use crate::lexer::Lexer as Lexer;
+pub use crate::parser::Parser as Parser;
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Clone)]

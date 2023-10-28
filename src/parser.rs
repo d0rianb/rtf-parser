@@ -213,11 +213,7 @@ pub mod tests {
             RtfHeader {
                 character_set: Ansi,
                 font_table: FontTable::from([
-                    (0, Font {
-                        name: "Helvetica",
-                        character_set: 0,
-                        font_family: Swiss,
-                    })
+                    (0, Font { name: "Helvetica", character_set: 0, font_family: Swiss })
                 ])
             }
         );
@@ -225,38 +221,19 @@ pub mod tests {
             doc.body,
             [
                 StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 0,
-                        bold: false,
-                        italic: false,
-                        underline: false,
-                    },
+                    painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
                     text: "Voici du texte en ",
                 },
                 StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 0,
-                        bold: true,
-                        italic: false,
-                        underline: false,
-                    },
+                    painter: Painter { font_ref: 0, font_size: 0, bold: true, italic: false, underline: false },
                     text: "gras",
                 },
                 StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 0,
-                        bold: false,
-                        italic: false,
-                        underline: false,
-                    },
+                    painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
                     text: ".",
                 },
             ]
-
-        )
+        );
     }
 
     #[test]
