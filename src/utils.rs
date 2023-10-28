@@ -1,5 +1,7 @@
 pub trait StrUtils {
     fn split_first_whitespace(&self) -> (&str, &str);
+
+    fn is_only_whitespace(&self) -> bool;
 }
 
 impl StrUtils for str {
@@ -20,6 +22,11 @@ impl StrUtils for str {
         } else {
             (self, "")
         }
+    }
+
+    fn is_only_whitespace(&self) -> bool {
+        // TODO
+        false
     }
 }
 

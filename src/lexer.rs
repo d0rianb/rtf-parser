@@ -65,7 +65,7 @@ impl Lexer {
                 }
                 'a'..='z' => {
                     // Identify control word
-                    // ex: parse "\b Words in bold" -> (Token::ControlWord(ControlWord::Bold), Token::ControlWordArgumen("Words in bold")
+                    // ex: parse "\b Words in bold" -> (Token::ControlWord(ControlWord::Bold), Token::ControlWordArgument("Words in bold")
                     let (ident, tail) = slice.split_first_whitespace();
                     let mut ret = vec![Token::ControlSymbol(ControlWord::from(ident))];
                     if tail.len() > 0 {
@@ -73,6 +73,7 @@ impl Lexer {
                     }
                     return ret;
                 }
+                '*' => vec![Token::IgnorableDestination],
                 _ => vec![],
             },
             // Handle brackets
@@ -167,5 +168,17 @@ if (a == b) \{\
                 ClosingBracket
             ],
         );
+    }
+
+    #[test]
+    fn scan_ignorable_destination() {
+        let text = r"{\*\expandedcolortbl;;}";
+        let tokens = Lexer::scan(text);
+        assert_eq!(tokens, vec![
+            OpeningBracket,
+            IgnorableDestination,
+            ControlSymbol((Unknown(r"\expandedcolortbl;;"), None)),
+            ClosingBracket,
+        ])
     }
 }

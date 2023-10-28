@@ -1,59 +1,109 @@
 use std::collections::HashMap;
 use std::mem;
+use std::ops::Add;
 
-use crate::header::{Font, FontFamily, FontRef, FontTable, RTFHeader};
+use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
 use crate::{ControlWord, Property, Token};
+use crate::utils::StrUtils;
 
-const ControlTableToken: Token<'static> = Token::ControlSymbol((ControlWord::FontTable, Property::None));
+const CONTROL_TABLE_TOKEN: Token<'static> = Token::ControlSymbol((ControlWord::FontTable, Property::None));
 
+#[derive(Debug, Default)]
+pub struct RtfDocument<'a> {
+    pub header: RtfHeader<'a>,
+    pub body: Vec<StyleBlock<'a>>
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StyleBlock<'a> {
+    pub painter: Painter,
+    pub text: &'a str
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Painter {
     font_ref: FontRef,
+    font_size: u16,
+    bold: bool,
+    italic: bool,
+    underline: bool,
 }
 
 pub struct Parser<'a> {
-    tokens: Vec<Token<'a>>
+    tokens: Vec<Token<'a>>,
+    cursor: usize,
 }
 
 impl<'a> Parser<'a> {
 
     pub fn new(tokens: Vec<Token<'a>>) -> Self {
-        Self { tokens }
+        Self { tokens, cursor: 0 }
     }
 
-    pub fn check_document_validity(&self) {
+    fn check_document_validity(&self) {
         // Check the document boundaries
         assert_eq!(self.tokens.first().expect("Unable to retrieve first token"), &Token::OpeningBracket, "Invalid first token : not a {{");
         assert_eq!(self.tokens.last().expect("Unable to retrieve last token"), &Token::ClosingBracket, "Invalid last token : not a }}");
     }
 
-    pub fn parse(&mut self) {
-        self.parse_header();
-        let mut painter_stack: Vec<Painter> = vec![];
+    pub fn parse(&mut self) -> RtfDocument<'a> {
+        let mut document = RtfDocument::default();
+        self.parse_ignore_groups();
+        document.header = self.parse_header();
+        // Parse Body
+        let mut painter_stack: Vec<Painter> = vec![Painter::default()];
         let mut it = self.tokens.iter();
-        // while let Some(token) = it.next() {
-        //     match token {
-        //         Token::OpeningBracket => {}
-        //         Token::ClosingBracket => {
-        //             let _ = painter_stack.pop();
-        //         }
-        //         _ => {}
-        //     }
-        // }
+        while let Some(token) = it.next() {
+            match token {
+                Token::OpeningBracket => { painter_stack.push(Painter::default()); }
+                Token::ClosingBracket => { let _ = painter_stack.pop().expect("[Parser] : Empty painter stack : Too many closing brackets"); }
+                Token::ControlSymbol((control_word, property)) => {
+                    let mut current_painter = painter_stack.last_mut().expect("[Parser] : Malformed painter stack");
+                    match control_word {
+                        ControlWord::FontNumber => { current_painter.font_ref = property.get_value() as u16 }
+                        ControlWord::Bold => { current_painter.bold = property.as_bool(); }
+                        ControlWord::Italic => { current_painter.italic = property.as_bool(); }
+                        ControlWord::Underline => { current_painter.underline = property.as_bool(); }
+                        _ => {}
+                    }
+                }
+                Token::PlainText(text) => {
+                    let current_painter = painter_stack.last().expect("[Parser] : Empty painter stack : Too many closing brackets");
+                    document.body.push(StyleBlock {
+                        painter: current_painter.clone(),
+                        text: *text
+                    })
+                }
+                Token::CRLF => {}
+                Token::IgnorableDestination => { panic!("[Parser] : No ignorable destination should be left"); }
+            }
+        }
+        return document;
     }
 
+    fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> {
+        return self.tokens.get(index);
+    }
+
+    // get a reference of the next token after cursor
     fn get_next_token(&'a self) -> Option<&'a Token<'a>> {
-        self.tokens.get(0)
+        return self.get_token_at(self.cursor);
     }
 
-    fn consume_token(&mut self) -> Option<Token<'a>> {
+    fn consume_token_at(&mut self, index: usize) -> Option<Token<'a>> {
         if self.tokens.is_empty() { return None; }
-        Some(self.tokens.remove(0))
+        Some(self.tokens.remove(index))
     }
 
-    fn consume_token_until(&mut self, reference_token: Token<'a>) -> Vec<Token<'a>> {
+    fn consume_next_token(&mut self) -> Option<Token<'a>> {
+        return self.consume_token_at(self.cursor);
+    }
+
+    // Consume token from cursor to <reference-token>
+    fn consume_tokens_until(&mut self, reference_token: Token<'a>) -> Vec<Token<'a>> {
         let mut ret = vec![];
         let token_type_id = mem::discriminant(&reference_token);
-        while let Some(token) = self.consume_token() {
+        while let Some(token) = self.consume_next_token() {
             let type_id = mem::discriminant(&token);
             ret.push(token);
             if type_id == token_type_id { break; }
@@ -61,27 +111,46 @@ impl<'a> Parser<'a> {
         return ret;
     }
 
-    fn parse_header(&mut self) {
-        let mut header = RTFHeader::default();
-        while let (token, next_token) = (self.consume_token(), self.get_next_token()) {
+    fn consume_tokens_until_matching_bracket(&mut self) -> Vec<Token<'a>> {
+        let mut ret = vec![];
+        let mut count = 0;
+        while let Some(token) = self.consume_next_token() {
+            match token {
+                Token::OpeningBracket => count += 1,
+                Token::ClosingBracket => count -= 1,
+                _ => {}
+            }
+            ret.push(token);
+            if count < 0 { break; }
+        }
+        return ret;
+    }
+
+    // Consume all tokens until the header is read
+    fn parse_header(&mut self) -> RtfHeader<'a> {
+        self.cursor = 0; // Reset the cursor
+        let mut header = RtfHeader::default();
+        while let (token, next_token) = (self.consume_next_token(), self.get_next_token()) {
             match (token, next_token) {
-                (Some(Token::OpeningBracket), Some(&ControlTableToken)) => {
-                    let font_table_tokens = self.consume_token_until(Token::ClosingBracket);
-                    let font_table = Self::parse_font_table(&font_table_tokens);
-                    dbg!(&font_table);
+                (Some(Token::OpeningBracket), Some(&CONTROL_TABLE_TOKEN)) => {
+                    let font_table_tokens = self.consume_tokens_until_matching_bracket();
+                    header.font_table = Self::parse_font_table(&font_table_tokens);
+                    break; // HACK: header is not finished after the character table but I still haven't figure out a proper way to determine it
                 },
+                (Some(ref token), _) => if let Some(charset) = CharacterSet::from(token) { header.character_set = charset; },
                 (None, None) => break,
-                (a, b) => {},
+                (_, _) => {},
             }
         }
+        return header;
     }
 
     fn parse_font_table(font_tables_tokens: &Vec<Token<'a>>) -> FontTable<'a> {
-        assert_eq!(font_tables_tokens.get(0), Some(&ControlTableToken));
+        assert_eq!(font_tables_tokens.get(0), Some(&CONTROL_TABLE_TOKEN));
         let mut table = HashMap::new();
         let mut current_key = 0;
         let mut current_font = Font::default();
-        for (index, token) in font_tables_tokens.iter().enumerate() {
+        for token in font_tables_tokens.iter() {
             match token {
                 Token::ControlSymbol((control_word, property)) => match control_word {
                     ControlWord::FontNumber => {
@@ -95,7 +164,7 @@ impl<'a> Parser<'a> {
                     }
                     _ => {},
                 },
-                Token::PlainText(name) => { current_font.name = name; },
+                Token::PlainText(name) => { current_font.name = name.trim_end_matches(';'); },
                 Token::ClosingBracket => { table.insert(current_key, current_font.clone()); }, // Insert previous font
                 _ => {}
             }
@@ -103,46 +172,91 @@ impl<'a> Parser<'a> {
         return table;
     }
 
+    // Delete the ignore groups
+    fn parse_ignore_groups(&mut self) {
+        self.cursor = 0;  // Reset the cursor
+        while let (Some(token), Some(next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
+            match (token, next_token) {
+                (Token::OpeningBracket, Token::IgnorableDestination) => { self.consume_tokens_until_matching_bracket(); }
+                _ => {}
+            }
+            self.cursor += 1;
+        }
+    }
 
-    pub fn to_text(&mut self) -> &'a str { "" }
+    pub fn to_text(&mut self) -> String {
+        let mut text = String::new();
+        let doc = self.parse();
+        for block in doc.body.iter() {
+            text.push_str(block.text);
+        }
+        return text;
+    }
 }
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
     use crate::lexer::Lexer;
-    use crate::Property::*;
-    use crate::Token::*;
+    use crate::header::{
+        RtfHeader,
+        FontFamily::*,
+        CharacterSet::*,
+    };
 
     #[test]
     fn parser_simple_test() {
         let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#);
-        let parser = Parser::new(tokens).parse();
+        let doc = Parser::new(tokens).parse();
+        assert_eq!(
+            doc.header,
+            RtfHeader {
+                character_set: Ansi,
+                font_table: FontTable::from([
+                    (0, Font {
+                        name: "Helvetica",
+                        character_set: 0,
+                        font_family: Swiss,
+                    })
+                ])
+            }
+        );
+        assert_eq!(
+            doc.body,
+            [
+                StyleBlock {
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 0,
+                        bold: false,
+                        italic: false,
+                        underline: false,
+                    },
+                    text: "Voici du texte en ",
+                },
+                StyleBlock {
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 0,
+                        bold: true,
+                        italic: false,
+                        underline: false,
+                    },
+                    text: "gras",
+                },
+                StyleBlock {
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 0,
+                        bold: false,
+                        italic: false,
+                        underline: false,
+                    },
+                    text: ".",
+                },
+            ]
 
-        // assert_eq!(
-        //     tokens,
-        //     vec![
-        //         OpeningBracket,
-        //         ControlSymbol((Rtf, Value(1))),
-        //         ControlSymbol((Ansi, None)),
-        //         OpeningBracket,
-        //         ControlSymbol((Unknown("\\fonttbl"), None)),
-        //         ControlSymbol((FontNumber, Value(0))),
-        //         ControlSymbol((Unknown("\\fswiss"), None)),
-        //         PlainText("Helvetica;"),
-        //         ClosingBracket,
-        //         ControlSymbol((FontNumber, Value(0))),
-        //         ControlSymbol((Unknown("\\pard"), None)),
-        //         PlainText("Voici du texte en "),
-        //         OpeningBracket,
-        //         ControlSymbol((Bold, None)),
-        //         PlainText("gras"),
-        //         ClosingBracket,
-        //         PlainText("."),
-        //         ControlSymbol((Unknown("\\par"), None)),
-        //         ClosingBracket
-        //     ]
-        // );
+        )
     }
 
     #[test]
@@ -174,17 +288,46 @@ pub mod tests {
                 \tx4320\tab Left tab
             }"
         ];
-        for document in documents.iter() {
-            let tokens = Lexer::scan(*document);
-            Parser::new(tokens);
+        for document in documents.into_iter() {
+            let tokens = Lexer::scan(document);
+            Parser::new(tokens).parse();
         }
     }
 
-    // #[test]
+    #[test]
+    fn parse_entire_file_header() {
+        let file_content = include_str!("../test2.rtf");
+        let tokens = Lexer::scan(file_content);
+        let doc = Parser::new(tokens).parse();
+        assert_eq!(doc.header, RtfHeader {
+            character_set: Ansi,
+            font_table: FontTable::from([
+                (0, Font {
+                    name: "Helvetica",
+                    character_set: 0,
+                    font_family: Swiss,
+                }),
+                (1, Font {
+                    name: "Helvetica-Bold",
+                    character_set: 0,
+                    font_family: Swiss,
+                })
+            ]),
+        })
+    }
+
+    #[test]
+    fn parse_ignore_group_test() {
+        let rtf = r"{\*\expandedcolortbl;;}";
+        let tokens = Lexer::scan(rtf);
+        let mut parser = Parser::new(tokens);
+        parser.parse();
+        assert_eq!(parser.tokens, vec![]);
+    }
+
+    #[test]
     fn rtf_to_text() {
-        let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard
-             Voici du texte en {\b gras}.\par
-             }"#;
+        let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
         let tokens = Lexer::scan(rtf);
         let text = Parser::new(tokens).to_text();
         assert_eq!(text, "Voici du texte en gras.")

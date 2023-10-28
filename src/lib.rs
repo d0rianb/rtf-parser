@@ -8,14 +8,20 @@ mod utils;
 mod header;
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token<'a> {
     PlainText(&'a str),
     OpeningBracket,
     ClosingBracket,
     CRLF, // Line-return \n
+    IgnorableDestination, // \*\ <destination-name>
     ControlSymbol(ControlSymbol<'a>),
 }
+
+
+// A control symbol is a pair (control_word, property)
+// In the RTF specifiaction, it refer to 'control word entity'
+type ControlSymbol<'a> = (ControlWord<'a>, Property);
 
 // Parameters for a control word
 #[allow(dead_code)]
@@ -25,6 +31,24 @@ pub enum Property {
     Off, // 0
     Value(i32),
     None, // No parameter
+}
+
+impl Property {
+    fn as_bool(&self) -> bool {
+        match self {
+            Property::On => true,
+            Property::Off => false,
+            Property::None => true,
+            Property::Value(val) => if *val == 1 { true } else { false },
+        }
+    }
+
+    fn get_value(&self) -> i32 {
+        if let Property::Value(value) = &self {
+            return *value;
+        }
+        return 0;
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -37,15 +61,15 @@ pub enum ControlWord<'a> {
     FontNumber,
     FontSize,
 
+    ColorTable,
+    FileTable,
+
     Italic,
     Bold,
     Underline,
 
     Unknown(&'a str),
 }
-
-// A control symbol is a pair (control_word, property)
-type ControlSymbol<'a> = (ControlWord<'a>, Property);
 
 impl<'a> ControlWord<'a> {
     pub fn from(input: &str) -> ControlSymbol {
@@ -54,7 +78,7 @@ impl<'a> ControlWord<'a> {
         let mut suffix_index = 0;
         while let Some(c) = it.next() {
             match c {
-                '0'..='9' => {
+                '0'..='9' | '-' => {
                     suffix_index += 1;
                 }
                 _ => break,
@@ -69,13 +93,15 @@ impl<'a> ControlWord<'a> {
         let property = if suffix == "" {
             Property::None
         } else {
-            Property::Value(suffix.parse::<i32>().expect(&format!("[Lexer] Unable to parse {}", &suffix)))
+            Property::Value(suffix.parse::<i32>().expect(&format!("[Lexer] Unable to parse {} as integer", &suffix)))
         };
 
         let control_word = match prefix {
             r"\rtf" => ControlWord::Rtf,
             r"\ansi" => ControlWord::Ansi,
             r"\fonttbl" => ControlWord::FontTable,
+            r"\colortabl" => ControlWord::ColorTable,
+            r"\filetbl" => ControlWord::FileTable,
             r"\fcharset" => ControlWord::FontCharset,
             r"\f" => ControlWord::FontNumber,
             r"\fs" => ControlWord::FontSize,
@@ -96,5 +122,11 @@ mod tests {
     fn control_word_from_input_test() {
         let input = r"\rtf1";
         assert_eq!(ControlWord::from(input), (ControlWord::Rtf, Property::Value(1)))
+    }
+
+    #[test]
+    fn control_word_with_negative_parameter() {
+        let input = r"\rtf-1";
+        assert_eq!(ControlWord::from(input), (ControlWord::Rtf, Property::Value(-1)))
     }
 }
