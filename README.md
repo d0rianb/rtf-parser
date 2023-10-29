@@ -5,22 +5,27 @@ The library is split into 2 main components:
 1. The lexer
 2. The parser
 
-The lexer scan the docuemnt and return a `Vec<Token>` which represent the RTF file in a code-understandable manner.
+The lexer scan the document and return a `Vec<Token>` which represent the RTF file in a code-understandable manner.
 To use it : 
 ```rust
-use rtf_parser::Lexer;
+use rtf_parser::{Lexer, Parser};
 
-let tokens = Lexer::scan("<rtf>");
+let tokens: Vec<Token> = Lexer::scan("<rtf>");
 ```
 
-These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.  
+These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.
+```rust
+let parser = Parser::new(tokens);
+let doc: RtfDocument = parser.parse();
+```
+
 An `RtfDocument` is composed with : 
 - the **header**, containing among others the font table and the encoding.
 - the **body**, which is a `Vec<StyledBlock>`
 
 A `StyledBlock` contains all the information about the formatting of a specific block of text.  
 It contains a `Painter` and the text (`&str`).
-The `Painter` is defined below, and the rendering implementation depends on the user. 
+The `Painter` is defined below, and the rendering implementation depends on the user. For now, it only supports font, bold, italic and underline.
 ```rust
 struct Painter {
     font_ref: FontRef,
@@ -33,7 +38,14 @@ struct Painter {
 
 The parser could also return the text without any formatting information, with the `to_text()` method.
 
-## Example 
+```rust
+let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
+let tokens = Lexer::scan(rtf);
+let text = Parser::new(tokens).to_text();
+assert_eq!(text, "Voici du texte en gras.");
+```
+
+## Examples 
 A complete example of rtf parsing is presented below : 
 ```rust
 use rtf_parser::{Lexer, Parser};
