@@ -276,7 +276,7 @@ pub mod tests {
 
     #[test]
     fn parse_entire_file_header() {
-        let file_content = include_str!("../test2.rtf");
+        let file_content = include_str!("../test-file.rtf");
         let tokens = Lexer::scan(file_content);
         let doc = Parser::new(tokens).parse();
         dbg!(&doc);
