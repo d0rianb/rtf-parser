@@ -110,6 +110,7 @@ impl<'a> Parser<'a> {
         return ret;
     }
 
+    // The opening bracket should already be consumed
     fn consume_tokens_until_matching_bracket(&mut self) -> Vec<Token<'a>> {
         let mut ret = vec![];
         let mut count = 0;
@@ -176,7 +177,10 @@ impl<'a> Parser<'a> {
         self.cursor = 0;  // Reset the cursor
         while let (Some(token), Some(next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
             match (token, next_token) {
-                (Token::OpeningBracket, Token::IgnorableDestination) => { self.consume_tokens_until_matching_bracket(); }
+                (Token::OpeningBracket, Token::IgnorableDestination) => {
+                    self.consume_token_at(self.cursor); // Consume the opening bracket
+                    self.consume_tokens_until_matching_bracket();
+                }
                 _ => {}
             }
             self.cursor += 1;
@@ -275,6 +279,7 @@ pub mod tests {
         let file_content = include_str!("../test2.rtf");
         let tokens = Lexer::scan(file_content);
         let doc = Parser::new(tokens).parse();
+        dbg!(&doc);
         assert_eq!(doc.header, RtfHeader {
             character_set: Ansi,
             font_table: FontTable::from([
