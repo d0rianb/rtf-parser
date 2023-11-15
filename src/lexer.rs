@@ -1,5 +1,5 @@
+use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
-use crate::{ControlWord, Token};
 
 pub struct Lexer;
 
@@ -43,6 +43,7 @@ impl Lexer {
         return tokens;
     }
 
+    /// Get a string slice cut but the scanner and return the coreesponding token(s)
     fn tokenize(slice: &str) -> Vec<Token> {
         let mut starting_chars = slice.trim_matches(' ').chars().take(2);
         return match (starting_chars.next(), starting_chars.next()) {
@@ -66,8 +67,11 @@ impl Lexer {
                 'a'..='z' => {
                     // Identify control word
                     // ex: parse "\b Words in bold" -> (Token::ControlWord(ControlWord::Bold), Token::ControlWordArgument("Words in bold")
-                    let (ident, tail) = slice.split_first_whitespace();
-                    let mut ret = vec![Token::ControlSymbol(ControlWord::from(ident))];
+                    let (mut ident, tail) = slice.split_first_whitespace();
+                    // if iednt end with semicolon, strip it for correct value parsing
+                    ident = if ident.chars().last().unwrap_or(' ') == ';' { &ident[0..ident.len() - 1] } else { ident };
+                    let control_word = ControlWord::from(ident);
+                    let mut ret = vec![Token::ControlSymbol(control_word)];
                     if tail.len() > 0 {
                         ret.push(Token::PlainText(tail));
                     }
@@ -97,9 +101,9 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Rtf, Unknown};
-    use crate::Property::*;
-    use crate::Token::*;
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Rtf, Unknown};
+    use crate::tokens::Property::*;
+    use crate::tokens::Token::*;
 
     #[test]
     fn simple_tokenize_test() {
@@ -174,11 +178,19 @@ if (a == b) \{\
     fn scan_ignorable_destination() {
         let text = r"{\*\expandedcolortbl;;}";
         let tokens = Lexer::scan(text);
-        assert_eq!(tokens, vec![
-            OpeningBracket,
-            IgnorableDestination,
-            ControlSymbol((Unknown(r"\expandedcolortbl;;"), None)),
-            ClosingBracket,
-        ])
+        assert_eq!(
+            tokens,
+            vec![OpeningBracket, IgnorableDestination, ControlSymbol((Unknown(r"\expandedcolortbl;"), None)), ClosingBracket,]
+        )
+    }
+
+    #[test]
+    fn should_parse_control_symbol_ending_semicolon() {
+        let text = r"{\red255\blue255;}";
+        let tokens = Lexer::scan(text);
+        assert_eq!(
+            tokens,
+            vec![OpeningBracket, ControlSymbol((Unknown(r"\red"), Value(255))), ControlSymbol((Unknown(r"\blue"), Value(255))), ClosingBracket]
+        );
     }
 }

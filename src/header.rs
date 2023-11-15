@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{ControlWord, Token};
+use crate::tokens::{ControlWord, Token};
 
 pub type FontRef = u16;
 pub type FontTable<'a> = HashMap<FontRef, Font<'a>>;
@@ -18,17 +18,14 @@ pub struct Font<'a> {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub enum CharacterSet {
+    #[default]
     Ansi,
     Mac,
     Pc,
     Pca,
     Ansicpg(u16),
-}
-
-impl Default for CharacterSet {
-    fn default() -> Self { CharacterSet::Ansi }
 }
 
 impl CharacterSet {
@@ -42,8 +39,9 @@ impl CharacterSet {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Hash, Clone)]
+#[derive(Debug, PartialEq, Hash, Clone, Default)]
 pub enum FontFamily {
+    #[default]
     Nil,
     Roman,
     Swiss,
@@ -54,9 +52,6 @@ pub enum FontFamily {
     Bidi,
 }
 
-impl Default for FontFamily {
-    fn default() -> Self { FontFamily::Nil }
-}
 
 impl FontFamily {
     pub fn from(string: &str) -> Option<Self> {

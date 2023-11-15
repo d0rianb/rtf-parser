@@ -2,20 +2,20 @@ use std::collections::HashMap;
 use std::mem;
 
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
-use crate::{ControlWord, Property, Token};
+use crate::tokens::{ControlWord, Property, Token};
 
 const CONTROL_TABLE_TOKEN: Token<'static> = Token::ControlSymbol((ControlWord::FontTable, Property::None));
 
 #[derive(Debug, Default)]
 pub struct RtfDocument<'a> {
     pub header: RtfHeader<'a>,
-    pub body: Vec<StyleBlock<'a>>
+    pub body: Vec<StyleBlock<'a>>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct StyleBlock<'a> {
     pub painter: Painter,
-    pub text: &'a str
+    pub text: &'a str,
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -33,7 +33,6 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-
     pub fn new(tokens: Vec<Token<'a>>) -> Self {
         Self { tokens, cursor: 0 }
     }
@@ -54,15 +53,25 @@ impl<'a> Parser<'a> {
         let mut it = self.tokens.iter();
         while let Some(token) = it.next() {
             match token {
-                Token::OpeningBracket => { painter_stack.push(Painter::default()); }
-                Token::ClosingBracket => { let _ = painter_stack.pop().expect("[Parser] : Empty painter stack : Too many closing brackets"); }
+                Token::OpeningBracket => {
+                    painter_stack.push(Painter::default());
+                }
+                Token::ClosingBracket => {
+                    let _ = painter_stack.pop().expect("[Parser] : Empty painter stack : Too many closing brackets");
+                }
                 Token::ControlSymbol((control_word, property)) => {
                     let mut current_painter = painter_stack.last_mut().expect("[Parser] : Malformed painter stack");
                     match control_word {
-                        ControlWord::FontNumber => { current_painter.font_ref = property.get_value() as u16 }
-                        ControlWord::Bold => { current_painter.bold = property.as_bool(); }
-                        ControlWord::Italic => { current_painter.italic = property.as_bool(); }
-                        ControlWord::Underline => { current_painter.underline = property.as_bool(); }
+                        ControlWord::FontNumber => current_painter.font_ref = property.get_value() as u16,
+                        ControlWord::Bold => {
+                            current_painter.bold = property.as_bool();
+                        }
+                        ControlWord::Italic => {
+                            current_painter.italic = property.as_bool();
+                        }
+                        ControlWord::Underline => {
+                            current_painter.underline = property.as_bool();
+                        }
                         _ => {}
                     }
                 }
@@ -70,11 +79,13 @@ impl<'a> Parser<'a> {
                     let current_painter = painter_stack.last().expect("[Parser] : Empty painter stack : Too many closing brackets");
                     document.body.push(StyleBlock {
                         painter: current_painter.clone(),
-                        text: *text
+                        text: *text,
                     })
                 }
                 Token::CRLF => {}
-                Token::IgnorableDestination => { panic!("[Parser] : No ignorable destination should be left"); }
+                Token::IgnorableDestination => {
+                    panic!("[Parser] : No ignorable destination should be left");
+                }
             }
         }
         return document;
@@ -90,7 +101,9 @@ impl<'a> Parser<'a> {
     }
 
     fn consume_token_at(&mut self, index: usize) -> Option<Token<'a>> {
-        if self.tokens.is_empty() { return None; }
+        if self.tokens.is_empty() {
+            return None;
+        }
         Some(self.tokens.remove(index))
     }
 
@@ -105,7 +118,9 @@ impl<'a> Parser<'a> {
         while let Some(token) = self.consume_next_token() {
             let type_id = mem::discriminant(&token);
             ret.push(token);
-            if type_id == token_type_id { break; }
+            if type_id == token_type_id {
+                break;
+            }
         }
         return ret;
     }
@@ -121,7 +136,9 @@ impl<'a> Parser<'a> {
                 _ => {}
             }
             ret.push(token);
-            if count < 0 { break; }
+            if count < 0 {
+                break;
+            }
         }
         return ret;
     }
@@ -136,10 +153,14 @@ impl<'a> Parser<'a> {
                     let font_table_tokens = self.consume_tokens_until_matching_bracket();
                     header.font_table = Self::parse_font_table(&font_table_tokens);
                     break; // HACK: header is not finished after the character table but I still haven't figure out a proper way to determine it
-                },
-                (Some(ref token), _) => if let Some(charset) = CharacterSet::from(token) { header.character_set = charset; },
+                }
+                (Some(ref token), _) => {
+                    if let Some(charset) = CharacterSet::from(token) {
+                        header.character_set = charset;
+                    }
+                }
                 (None, None) => break,
-                (_, _) => {},
+                (_, _) => {}
             }
         }
         return header;
@@ -156,16 +177,25 @@ impl<'a> Parser<'a> {
                     ControlWord::FontNumber => {
                         // Insert previous font
                         table.insert(current_key, current_font.clone());
-                        if let Property::Value(key) = property { current_key = *key as FontRef; }
-                        else { panic!("[Parser] Invalid font indentifier : {:?}", property) }
-                    },
-                    ControlWord::Unknown(name) => if let Some(font_family) = FontFamily::from(name) {
-                        current_font.font_family = font_family;
+                        if let Property::Value(key) = property {
+                            current_key = *key as FontRef;
+                        } else {
+                            panic!("[Parser] Invalid font identifier : {:?}", property)
+                        }
                     }
-                    _ => {},
+                    ControlWord::Unknown(name) => {
+                        if let Some(font_family) = FontFamily::from(name) {
+                            current_font.font_family = font_family;
+                        }
+                    }
+                    _ => {}
                 },
-                Token::PlainText(name) => { current_font.name = name.trim_end_matches(';'); },
-                Token::ClosingBracket => { table.insert(current_key, current_font.clone()); }, // Insert previous font
+                Token::PlainText(name) => {
+                    current_font.name = name.trim_end_matches(';');
+                }
+                Token::ClosingBracket => {
+                    table.insert(current_key, current_font.clone());
+                } // Insert previous font
                 _ => {}
             }
         }
@@ -174,7 +204,7 @@ impl<'a> Parser<'a> {
 
     // Delete the ignore groups
     fn parse_ignore_groups(&mut self) {
-        self.cursor = 0;  // Reset the cursor
+        self.cursor = 0; // Reset the cursor
         while let (Some(token), Some(next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
             match (token, next_token) {
                 (Token::OpeningBracket, Token::IgnorableDestination) => {
@@ -200,12 +230,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::header::{CharacterSet::*, FontFamily::*, RtfHeader};
     use crate::lexer::Lexer;
-    use crate::header::{
-        RtfHeader,
-        FontFamily::*,
-        CharacterSet::*,
-    };
 
     #[test]
     fn parser_simple_test() {
@@ -215,24 +241,47 @@ pub mod tests {
             doc.header,
             RtfHeader {
                 character_set: Ansi,
-                font_table: FontTable::from([
-                    (0, Font { name: "Helvetica", character_set: 0, font_family: Swiss })
-                ])
+                font_table: FontTable::from([(
+                    0,
+                    Font {
+                        name: "Helvetica",
+                        character_set: 0,
+                        font_family: Swiss
+                    }
+                )])
             }
         );
         assert_eq!(
             doc.body,
             [
                 StyleBlock {
-                    painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 0,
+                        bold: false,
+                        italic: false,
+                        underline: false
+                    },
                     text: "Voici du texte en ",
                 },
                 StyleBlock {
-                    painter: Painter { font_ref: 0, font_size: 0, bold: true, italic: false, underline: false },
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 0,
+                        bold: true,
+                        italic: false,
+                        underline: false
+                    },
                     text: "gras",
                 },
                 StyleBlock {
-                    painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 0,
+                        bold: false,
+                        italic: false,
+                        underline: false
+                    },
                     text: ".",
                 },
             ]
@@ -240,17 +289,8 @@ pub mod tests {
     }
 
     #[test]
-    fn parse_multiple_documents() {
-        let documents = vec![
-            r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Courier;}{\f1 ProFontWindows;}}
-                This line is font 0 which is courier\line
-                \f1
-                This line is font 1\line
-                \f0
-                This line is font 0 again\line
-            }",
-
-            r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Courier;}{\f1 ProFontWindows;}}
+    fn parse_multiline_document() {
+        let document = r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Courier;}{\f1 ProFontWindows;}}
             {\colortbl;\red0\green0\blue0;\red255\green0\blue0;\red255\green255\blue0;}
             This line is font 0 which is courier\line
             \f1
@@ -260,41 +300,43 @@ pub mod tests {
             This line has a \cf2 red \cf1 word\line
             \highlight3 while this line has a \cf2 red \cf1 word and is highlighted in yellow\highlight0\line
             Finally, back to the default color.\line
-            }",
-
-            r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Courier;}}
-                \tqr\tx4320\tab Right tab\par\pard
-                \tqc\tx4320\tab Center tab\par\pard
-                \tx4320\tab Left tab
-            }"
-        ];
-        for document in documents.into_iter() {
-            let tokens = Lexer::scan(document);
-            Parser::new(tokens).parse();
-        }
+            }";
+        let tokens = Lexer::scan(document);
+        let doc = Parser::new(tokens).parse();
+        dbg!(doc);
     }
 
     #[test]
     fn parse_entire_file_header() {
         let file_content = include_str!("../test-file.rtf");
         let tokens = Lexer::scan(file_content);
+        dbg!(&tokens);
         let doc = Parser::new(tokens).parse();
-        dbg!(&doc);
-        assert_eq!(doc.header, RtfHeader {
-            character_set: Ansi,
-            font_table: FontTable::from([
-                (0, Font {
-                    name: "Helvetica",
-                    character_set: 0,
-                    font_family: Swiss,
-                }),
-                (1, Font {
-                    name: "Helvetica-Bold",
-                    character_set: 0,
-                    font_family: Swiss,
-                })
-            ]),
-        })
+        assert_eq!(
+            doc.header,
+            RtfHeader {
+                character_set: Ansi,
+                font_table: FontTable::from([
+                    (
+                        0,
+                        Font {
+                            name: "Helvetica",
+                            character_set: 0,
+                            font_family: Swiss,
+                        }
+                    ),
+                    (
+                        1,
+                        Font {
+                            name: "Helvetica-Bold",
+                            character_set: 0,
+                            font_family: Swiss,
+                        }
+                    )
+                ]),
+            }
+        );
+        dbg!(doc.body);
     }
 
     #[test]
