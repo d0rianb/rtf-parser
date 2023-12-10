@@ -20,11 +20,11 @@ pub struct StyleBlock<'a> {
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Painter {
-    font_ref: FontRef,
-    font_size: u16,
-    bold: bool,
-    italic: bool,
-    underline: bool,
+    pub font_ref: FontRef,
+    pub font_size: u16,
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
 }
 
 pub struct Parser<'a> {
