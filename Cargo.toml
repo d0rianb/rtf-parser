@@ -2,7 +2,7 @@
 name = "rtf-parser"
 description = "A Rust RTF parser & lexer library designed for speed and memory efficiency."
 repository = "https://github.com/d0rianb/rtf-parser"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 license = "MIT"
 keywords = ["rtf", "rich" ,"text", "format", "parser"]
