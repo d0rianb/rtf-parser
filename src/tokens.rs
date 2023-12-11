@@ -11,7 +11,7 @@ pub enum Token<'a> {
 
 // A control symbol is a pair (control_word, property)
 // In the RTF specifiaction, it refer to 'control word entity'
-type ControlSymbol<'a> = (ControlWord<'a>, Property);
+pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 
 // Parameters for a control word
 #[allow(dead_code)]
