@@ -4,13 +4,16 @@
 
 #![allow(irrefutable_let_patterns)]
 
+mod document;
 mod tokens;
 mod lexer;
 mod parser;
 mod header;
 mod utils;
 
-// expose the lexer and the parser
+// Public API of the crate
+pub use crate::header::{CharacterSet, RtfHeader};
 pub use crate::lexer::Lexer;
-pub use crate::parser::{Parser, Painter};
+pub use crate::parser::{Painter, Parser, StyleBlock};
+pub use crate::document::RtfDocument;
 pub use crate::tokens::Token;
