@@ -1,16 +1,11 @@
 use std::collections::HashMap;
 use std::mem;
+use crate::document::RtfDocument;
 
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
 use crate::tokens::{ControlWord, Property, Token};
 
 const CONTROL_TABLE_TOKEN: Token<'static> = Token::ControlSymbol((ControlWord::FontTable, Property::None));
-
-#[derive(Debug, Default)]
-pub struct RtfDocument<'a> {
-    pub header: RtfHeader<'a>,
-    pub body: Vec<StyleBlock<'a>>,
-}
 
 #[derive(Debug, PartialEq)]
 pub struct StyleBlock<'a> {
@@ -216,15 +211,6 @@ impl<'a> Parser<'a> {
             self.cursor += 1;
         }
     }
-
-    pub fn to_text(&mut self) -> String {
-        let mut text = String::new();
-        let doc = self.parse();
-        for block in doc.body.iter() {
-            text.push_str(block.text);
-        }
-        return text;
-    }
 }
 
 #[cfg(test)]
@@ -336,7 +322,7 @@ pub mod tests {
                 ]),
             }
         );
-        dbg!(doc.body);
+        dbg!(doc);
     }
 
     #[test]
@@ -346,13 +332,5 @@ pub mod tests {
         let mut parser = Parser::new(tokens);
         parser.parse();
         assert_eq!(parser.tokens, vec![]);
-    }
-
-    #[test]
-    fn rtf_to_text() {
-        let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
-        let tokens = Lexer::scan(rtf);
-        let text = Parser::new(tokens).to_text();
-        assert_eq!(text, "Voici du texte en gras.")
     }
 }

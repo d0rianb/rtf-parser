@@ -68,7 +68,7 @@ impl Lexer {
                     // Identify control word
                     // ex: parse "\b Words in bold" -> (Token::ControlWord(ControlWord::Bold), Token::ControlWordArgument("Words in bold")
                     let (mut ident, tail) = slice.split_first_whitespace();
-                    // if iednt end with semicolon, strip it for correct value parsing
+                    // if ident end with semicolon, strip it for correct value parsing
                     ident = if ident.chars().last().unwrap_or(' ') == ';' { &ident[0..ident.len() - 1] } else { ident };
                     let control_word = ControlWord::from(ident);
                     let mut ret = vec![Token::ControlSymbol(control_word)];

@@ -10,8 +10,7 @@ mod parser;
 mod header;
 mod utils;
 
-// Public API of the crate
-pub use crate::header::{CharacterSet, RtfHeader};
+// expose the lexer and the parser
 pub use crate::lexer::Lexer;
-pub use crate::parser::{Painter, Parser, RtfDocument, StyleBlock};
+pub use crate::parser::{Parser, Painter};
 pub use crate::tokens::Token;
