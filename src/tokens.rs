@@ -19,7 +19,7 @@ pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 pub enum Property {
     On,  // 1
     Off, // 0
-    Value(i32),
+    Value(i32), // Specified as i32 in the specification
     None, // No parameter
 }
 

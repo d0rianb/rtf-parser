@@ -217,6 +217,7 @@ impl<'a> Parser<'a> {
 pub mod tests {
     use super::*;
     use crate::header::{CharacterSet::*, FontFamily::*, RtfHeader};
+    use crate::include_test_file;
     use crate::lexer::Lexer;
 
     #[test]
@@ -294,7 +295,7 @@ pub mod tests {
 
     #[test]
     fn parse_entire_file_header() {
-        let file_content = include_str!("../test-file.rtf");
+        let file_content = include_test_file!("test-file.rtf");
         let tokens = Lexer::scan(file_content);
         dbg!(&tokens);
         let doc = Parser::new(tokens).parse();

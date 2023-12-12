@@ -30,6 +30,14 @@ impl StrUtils for str {
     }
 }
 
+// Specify the path to the test files
+#[macro_export]
+macro_rules! include_test_file {
+    ($filename:expr) => {
+        include_str!(concat!("../resources/tests/", $filename))
+    };
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
