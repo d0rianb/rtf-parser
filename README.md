@@ -41,7 +41,8 @@ The parser could also return the text without any formatting information, with t
 ```rust
 let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
 let tokens = Lexer::scan(rtf);
-let text = Parser::new(tokens).to_text();
+let document = Parser::new(tokens);
+let text = document.to_text();
 assert_eq!(text, "Voici du texte en gras.");
 ```
 

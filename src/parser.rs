@@ -246,7 +246,6 @@ pub mod tests {
     use crate::header::{CharacterSet::*, FontFamily::*, RtfHeader};
     use crate::include_test_file;
     use crate::lexer::Lexer;
-    use crate::Token::{CRLF, PlainText};
 
     #[test]
     fn parser_simple_test() {
