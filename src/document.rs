@@ -4,14 +4,14 @@ use crate::StyleBlock;
 #[derive(Debug, Default)]
 pub struct RtfDocument<'a> {
     pub header: RtfHeader<'a>,
-    pub body: Vec<StyleBlock<'a>>,
+    pub body: Vec<StyleBlock>,
 }
 
 impl<'a> RtfDocument<'a> {
     pub fn get_text(&self) -> String {
         let mut result = String::new();
         for style_block in &self.body {
-            result.push_str(style_block.text);
+            result.push_str(&style_block.text);
         }
         return result;
     }

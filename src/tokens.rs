@@ -1,23 +1,41 @@
+use std::fmt;
+
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum Token<'a> {
     PlainText(&'a str),
     OpeningBracket,
     ClosingBracket,
-    CRLF,                 // Line-return \n
-    IgnorableDestination, // \*\ <destination-name>
+    CRLF,
+    // Line-return \n
+    IgnorableDestination,
+    // \*\ <destination-name>
     ControlSymbol(ControlSymbol<'a>),
 }
 
+#[allow(dead_code)]
+impl<'a> fmt::Debug for Token<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Token::PlainText(text) => write!(f, r"PlainText : {:?}", text),
+            Token::OpeningBracket => write!(f, "OpeningBracket"),
+            Token::ClosingBracket => write!(f, "ClosingBracket"),
+            Token::CRLF => write!(f, "CRLF"),
+            Token::IgnorableDestination => write!(f, "IgnorableDestination"),
+            Token::ControlSymbol(symbol) => write!(f, "ControlSymbol : {:?}", symbol)
+        }
+    }
+}
+
 // A control symbol is a pair (control_word, property)
-// In the RTF specifiaction, it refer to 'control word entity'
+// In the RTF specification, it refer to 'control word entity'
 pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 
 // Parameters for a control word
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Property {
-    On,  // 1
+    On, // 1
     Off, // 0
     Value(i32), // Specified as i32 in the specification
     None, // No parameter
@@ -64,6 +82,11 @@ pub enum ControlWord<'a> {
     Bold,
     Underline,
 
+    Par,
+    Pard,
+    Sectd,
+    Plain,
+
     Unknown(&'a str),
 }
 
@@ -104,6 +127,10 @@ impl<'a> ControlWord<'a> {
             r"\i" => ControlWord::Italic,
             r"\b" => ControlWord::Bold,
             r"\u" => ControlWord::Underline,
+            r"\par" => ControlWord::Par,
+            r"\pard" => ControlWord::Pard,
+            r"\sectd" => ControlWord::Sectd,
+            r"\plain" => ControlWord::Plain,
             _ => ControlWord::Unknown(prefix),
         };
         return (control_word, property);

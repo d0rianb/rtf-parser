@@ -5,12 +5,16 @@ use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
 use crate::tokens::{ControlWord, Property, Token};
 
-const CONTROL_TABLE_TOKEN: Token<'static> = Token::ControlSymbol((ControlWord::FontTable, Property::None));
+// Use to specify control word in parse_header
+macro_rules! header_control_word {
+    ($cw:ident) => { Token::ControlSymbol((ControlWord::$cw, _)) };
+    ($cw:ident, $prop:ident) => { Token::ControlSymbol((ControlWord::$cw, Property::$prop)) };
+}
 
-#[derive(Debug, PartialEq)]
-pub struct StyleBlock<'a> {
+#[derive(Debug, Default, PartialEq)]
+pub struct StyleBlock {
     pub painter: Painter,
-    pub text: &'a str,
+    pub text: String
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -40,8 +44,8 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> RtfDocument<'a> {
         self.check_document_validity();
-        let mut document = RtfDocument::default();
-        self.parse_ignore_groups();
+        let mut document = RtfDocument::default(); // Init empty document
+        self.parse_ignore_groups(); // delete the ignore groups
         document.header = self.parse_header();
         // Parse Body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
@@ -55,29 +59,45 @@ impl<'a> Parser<'a> {
                     let _ = painter_stack.pop().expect("[Parser] : Empty painter stack : Too many closing brackets");
                 }
                 Token::ControlSymbol((control_word, property)) => {
-                    let mut current_painter = painter_stack.last_mut().expect("[Parser] : Malformed painter stack");
+                    let current_painter = painter_stack.last_mut().expect("[Parser] : Malformed painter stack");
                     match control_word {
                         ControlWord::FontNumber => current_painter.font_ref = property.get_value() as u16,
-                        ControlWord::Bold => {
-                            current_painter.bold = property.as_bool();
-                        }
-                        ControlWord::Italic => {
-                            current_painter.italic = property.as_bool();
-                        }
-                        ControlWord::Underline => {
-                            current_painter.underline = property.as_bool();
-                        }
+                        ControlWord::Bold => { current_painter.bold = property.as_bool(); }
+                        ControlWord::Italic => { current_painter.italic = property.as_bool(); }
+                        ControlWord::Underline => { current_painter.underline = property.as_bool(); }
                         _ => {}
                     }
                 }
                 Token::PlainText(text) => {
                     let current_painter = painter_stack.last().expect("[Parser] : Empty painter stack : Too many closing brackets");
+                    let last_style_group = document.body.last_mut();
+                    // If the painter is the same than the previous one, merge the two block.
+                    if let Some(group) = last_style_group {
+                        if group.painter.eq(current_painter) {
+                            group.text.push_str(text);
+                            continue;
+                        }
+                    }
+                    // Else, push another StyleBlock on the stack with its own painter
                     document.body.push(StyleBlock {
                         painter: current_painter.clone(),
-                        text: *text,
-                    })
+                        text: String::from(*text),
+                    });
                 }
-                Token::CRLF => {}
+                Token::CRLF => {
+                    let text = "\n";
+                    let last_style_group = document.body.last_mut();
+                    // If the painter is the same than the previous one, merge the two block.
+                    if let Some(group) = last_style_group {
+                        group.text.push_str(text);
+                    } else {
+                        // CRLF is pushed with default style
+                        document.body.push(StyleBlock {
+                            painter: Painter::default(),
+                            text: String::from(text),
+                        })
+                    }
+                }
                 Token::IgnorableDestination => {
                     panic!("[Parser] : No ignorable destination should be left");
                 }
@@ -144,11 +164,18 @@ impl<'a> Parser<'a> {
         let mut header = RtfHeader::default();
         while let (token, next_token) = (self.consume_next_token(), self.get_next_token()) {
             match (token, next_token) {
-                (Some(Token::OpeningBracket), Some(&CONTROL_TABLE_TOKEN)) => {
+                (Some(Token::OpeningBracket), Some(&header_control_word!(FontTable, None))) => {
                     let font_table_tokens = self.consume_tokens_until_matching_bracket();
                     header.font_table = Self::parse_font_table(&font_table_tokens);
-                    break; // HACK: header is not finished after the character table but I still haven't figure out a proper way to determine it
                 }
+                // Break on par, pard, sectd, or plain
+                (Some(header_control_word!(Pard)
+                  | header_control_word!(Sectd)
+                  | header_control_word!(Plain)
+                  | header_control_word!(Par)
+                ), _) => break,
+                // Break if it declare a font after the font table --> no more in the header
+                // (Some(header_control_word!(FontNumber)), _) => if !header.font_table.is_empty() { break; },
                 (Some(ref token), _) => {
                     if let Some(charset) = CharacterSet::from(token) {
                         header.character_set = charset;
@@ -162,7 +189,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_font_table(font_tables_tokens: &Vec<Token<'a>>) -> FontTable<'a> {
-        assert_eq!(font_tables_tokens.get(0), Some(&CONTROL_TABLE_TOKEN));
+        assert_eq!(font_tables_tokens.get(0), Some(&header_control_word!(FontTable, None)));
         let mut table = HashMap::new();
         let mut current_key = 0;
         let mut current_font = Font::default();
@@ -219,6 +246,7 @@ pub mod tests {
     use crate::header::{CharacterSet::*, FontFamily::*, RtfHeader};
     use crate::include_test_file;
     use crate::lexer::Lexer;
+    use crate::Token::{CRLF, PlainText};
 
     #[test]
     fn parser_simple_test() {
@@ -249,7 +277,7 @@ pub mod tests {
                         italic: false,
                         underline: false
                     },
-                    text: "Voici du texte en ",
+                    text: "Voici du texte en ".into(),
                 },
                 StyleBlock {
                     painter: Painter {
@@ -259,7 +287,7 @@ pub mod tests {
                         italic: false,
                         underline: false
                     },
-                    text: "gras",
+                    text: "gras".into(),
                 },
                 StyleBlock {
                     painter: Painter {
@@ -269,7 +297,7 @@ pub mod tests {
                         italic: false,
                         underline: false
                     },
-                    text: ".",
+                    text: ".".into(),
                 },
             ]
         );
@@ -290,14 +318,12 @@ pub mod tests {
             }";
         let tokens = Lexer::scan(document);
         let doc = Parser::new(tokens).parse();
-        dbg!(doc);
     }
 
     #[test]
     fn parse_entire_file_header() {
         let file_content = include_test_file!("test-file.rtf");
         let tokens = Lexer::scan(file_content);
-        dbg!(&tokens);
         let doc = Parser::new(tokens).parse();
         assert_eq!(
             doc.header,
@@ -323,7 +349,6 @@ pub mod tests {
                 ]),
             }
         );
-        dbg!(doc);
     }
 
     #[test]
@@ -331,7 +356,31 @@ pub mod tests {
         let rtf = r"{\*\expandedcolortbl;;}";
         let tokens = Lexer::scan(rtf);
         let mut parser = Parser::new(tokens);
-        parser.parse();
-        assert_eq!(parser.tokens, vec![]);
+        let document = parser.parse();
+        assert_eq!(parser.tokens, vec![]); // Should have consume all the tokens
+        assert_eq!(document.header, RtfHeader::default());
+    }
+
+    #[test]
+    fn parse_whitespaces() {
+        let file_content = include_test_file!("list-item.rtf");
+        let tokens = Lexer::scan(file_content);
+        let mut parser = Parser::new(tokens);
+        let document = parser.parse();
+        assert_eq!(
+            document.body,
+            vec![
+                StyleBlock {
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 0,
+                        bold: false,
+                        italic: false,
+                        underline: false,
+                    },
+                    text: "\n\nEmpty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into()
+                }
+            ]
+        );
     }
 }

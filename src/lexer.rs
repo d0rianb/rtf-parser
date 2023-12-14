@@ -100,8 +100,9 @@ impl Lexer {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use crate::ControlWord::Par;
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Rtf, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Rtf, Pard, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 
@@ -127,14 +128,14 @@ pub(crate) mod tests {
                 PlainText("Helvetica;"),
                 ClosingBracket,
                 ControlSymbol((FontNumber, Value(0))),
-                ControlSymbol((Unknown("\\pard"), None)),
+                ControlSymbol((Pard, None)),
                 PlainText("Voici du texte en "),
                 OpeningBracket,
                 ControlSymbol((Bold, None)),
                 PlainText("gras"),
                 ClosingBracket,
                 PlainText("."),
-                ControlSymbol((Unknown("\\par"), None)),
+                ControlSymbol((Par, None)),
                 ClosingBracket,
             ]
         );
