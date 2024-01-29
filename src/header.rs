@@ -4,7 +4,7 @@ use crate::tokens::{ControlWord, Token};
 pub type FontRef = u16;
 pub type FontTable<'a> = HashMap<FontRef, Font<'a>>;
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct RtfHeader<'a> {
     pub character_set: CharacterSet,
     pub font_table: FontTable<'a>,
@@ -18,7 +18,7 @@ pub struct Font<'a> {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub enum CharacterSet {
     #[default]
     Ansi,

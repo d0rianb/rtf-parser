@@ -6,10 +6,8 @@ pub enum Token<'a> {
     PlainText(&'a str),
     OpeningBracket,
     ClosingBracket,
-    CRLF,
-    // Line-return \n
-    IgnorableDestination,
-    // \*\ <destination-name>
+    CRLF,  // Line-return \n
+    IgnorableDestination,  // \*\ <destination-name>
     ControlSymbol(ControlSymbol<'a>),
 }
 
@@ -47,13 +45,7 @@ impl Property {
             Property::On => true,
             Property::Off => false,
             Property::None => true,
-            Property::Value(val) => {
-                if *val == 1 {
-                    true
-                } else {
-                    false
-                }
-            }
+            Property::Value(val) => *val == 1
         }
     }
 

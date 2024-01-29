@@ -11,7 +11,7 @@ macro_rules! header_control_word {
     ($cw:ident, $prop:ident) => { Token::ControlSymbol((ControlWord::$cw, Property::$prop)) };
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct StyleBlock {
     pub painter: Painter,
     pub text: String
@@ -381,5 +381,13 @@ pub mod tests {
                 }
             ]
         );
+    }
+
+    #[test]
+    fn parse_image_data() {
+        // Try to parse without error
+        let rtf_content = include_test_file!("file-with-image.rtf");
+        let tokens = Lexer::scan(rtf_content);
+        let _document = Parser::new(tokens).parse();
     }
 }

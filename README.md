@@ -36,7 +36,7 @@ struct Painter {
 }
 ```
 
-The parser could also return the text without any formatting information, with the `to_text()` method.
+Tou can also extract the text without any formatting information, with the `to_text()` method of the `RtfDocument` struct.
 
 ```rust
 let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;

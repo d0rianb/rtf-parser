@@ -1,11 +1,29 @@
 use crate::header::RtfHeader;
-use crate::StyleBlock;
+use crate::{Lexer, Parser, StyleBlock};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct RtfDocument<'a> {
     pub header: RtfHeader<'a>,
     pub body: Vec<StyleBlock>,
 }
+
+// impl<'a> From<String> for RtfDocument<'a> {
+//     // Create a RTF document from file content
+//     fn from(file_content: String) -> Self {
+//         let tokens = Lexer::scan(&file_content);
+//         let document = Parser::new(tokens).parse();
+//         return document;
+//     }
+// }
+//
+// impl<'a> From<&'a str> for RtfDocument<'a> {
+//     // Create a RTF document from file content
+//     fn from(file_content: &str) -> Self {
+//         let tokens = Lexer::scan(file_content);
+//         let document =  Parser::new(tokens).parse();
+//         return document;
+//     }
+// }
 
 impl<'a> RtfDocument<'a> {
     pub fn get_text(&self) -> String {
@@ -19,7 +37,7 @@ impl<'a> RtfDocument<'a> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::{Lexer, Parser};
+    use crate::{Lexer, Parser, RtfDocument};
 
     #[test]
     fn test_get_text() {
@@ -31,5 +49,4 @@ pub(crate) mod tests {
             "Voici du texte en gras."
         )
     }
-
 }
