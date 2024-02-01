@@ -1,10 +1,34 @@
 use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
 
+use std::fmt;
+
+pub enum LexerError {
+    Error(String),
+    InvalidLastChar,
+}
+
+impl fmt::Display for LexerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _ = write!(f, "[RTF Lexer] : ");
+        let _ = match self {
+            LexerError::InvalidLastChar => write!(f, "Invalid last char, should be '}}'"),
+            LexerError::Error(msg) => write!(f, "{}", msg),
+        };
+        return Ok(());
+    }
+}
+
+impl fmt::Debug for LexerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        return write!(f, "{}", self);
+    }
+}
+
 pub struct Lexer;
 
 impl Lexer {
-    pub fn scan(src: &str) -> Vec<Token> {
+    pub fn scan(src: &str) -> Result<Vec<Token>, LexerError> {
         let mut it = src.chars();
         let mut tokens: Vec<Token> = vec![];
         let mut slice_start_index = 0;
@@ -21,7 +45,7 @@ impl Lexer {
                         // Close slice
                         let slice = &src[slice_start_index..current_index];
                         // Get the corresponding token(s)
-                        let slice_tokens = Self::tokenize(slice);
+                        let slice_tokens = Self::tokenize(slice)?;
                         for slice_token in slice_tokens {
                             tokens.push(slice_token);
                         }
@@ -38,21 +62,24 @@ impl Lexer {
         if slice_start_index < current_index {
             let slice = &src[slice_start_index..current_index];
             assert_eq!(slice, "}", "[Lexer] Invalid last char, should be '}}'");
+            if slice != "}" {
+                return Err(LexerError::InvalidLastChar);
+            }
             tokens.push(Token::ClosingBracket);
         }
-        return tokens;
+        return Ok(tokens);
     }
 
     /// Get a string slice cut but the scanner and return the coreesponding token(s)
-    fn tokenize(slice: &str) -> Vec<Token> {
+    fn tokenize(slice: &str) -> Result<Vec<Token>, LexerError> {
         let mut starting_chars = slice.trim_matches(' ').chars().take(2);
-        return match (starting_chars.next(), starting_chars.next()) {
-            // If it start with \ : escaped text or control word
+        return  match (starting_chars.next(), starting_chars.next()) {
+            // If it starts with \ : escaped text or control word
             (Some('\\'), Some(c)) => match c {
                 '{' | '}' | '\\' => {
                     // Handle escaped chars
                     let tail = slice.get(1..).unwrap_or("");
-                    return vec![Token::PlainText(tail)];
+                    return Ok(vec![Token::PlainText(tail)]);
                 }
                 '\n' => {
                     // CRLF
@@ -62,7 +89,7 @@ impl Lexer {
                             ret.push(Token::PlainText(tail))
                         }
                     }
-                    return ret;
+                    return Ok(ret);
                 }
                 'a'..='z' => {
                     // Identify control word
@@ -70,29 +97,29 @@ impl Lexer {
                     let (mut ident, tail) = slice.split_first_whitespace();
                     // if ident end with semicolon, strip it for correct value parsing
                     ident = if ident.chars().last().unwrap_or(' ') == ';' { &ident[0..ident.len() - 1] } else { ident };
-                    let control_word = ControlWord::from(ident);
+                    let control_word = ControlWord::from(ident)?;
                     let mut ret = vec![Token::ControlSymbol(control_word)];
                     if tail.len() > 0 {
                         ret.push(Token::PlainText(tail));
                     }
-                    return ret;
+                    return Ok(ret);
                 }
-                '*' => vec![Token::IgnorableDestination],
-                _ => vec![],
+                '*' => Ok(vec![Token::IgnorableDestination]),
+                _ => Ok(vec![]),
             },
             // Handle brackets
-            (Some('{'), None) => vec![Token::OpeningBracket],
-            (Some('}'), None) => vec![Token::ClosingBracket],
-            (Some('{'), Some(_)) => vec![Token::OpeningBracket, Token::PlainText(&slice[1..])],
-            (Some('}'), Some(_)) => vec![Token::ClosingBracket, Token::PlainText(&slice[1..])],
-            (None, None) => panic!("[Lexer] : Empty token {}", &slice),
+            (Some('{'), None) => Ok(vec![Token::OpeningBracket]),
+            (Some('}'), None) => Ok(vec![Token::ClosingBracket]),
+            (Some('{'), Some(_)) => Ok(vec![Token::OpeningBracket, Token::PlainText(&slice[1..])]),
+            (Some('}'), Some(_)) => Ok(vec![Token::ClosingBracket, Token::PlainText(&slice[1..])]),
+            (None, None) => Err(LexerError::Error(format!("Empty token {}", &slice))),
             // Else, it's plain text
             _ => {
                 let text = slice.trim();
                 if text == "" {
-                    return vec![];
+                    return Ok(vec![]);
                 }
-                return vec![Token::PlainText(slice.trim())];
+                return Ok(vec![Token::PlainText(slice.trim())]);
             }
         };
     }
@@ -109,7 +136,7 @@ pub(crate) mod tests {
 
     #[test]
     fn simple_tokenize_test() {
-        let tokens = Lexer::tokenize(r"\b Words in bold");
+        let tokens = Lexer::tokenize(r"\b Words in bold").unwrap();
         assert_eq!(tokens, vec![ControlSymbol((Bold, None)), PlainText("Words in bold"),]);
     }
 
@@ -117,7 +144,7 @@ pub(crate) mod tests {
     fn scan_entire_file_test() {
         let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#);
         assert_eq!(
-            tokens,
+            tokens.unwrap(),
             vec![
                 OpeningBracket,
                 ControlSymbol((Rtf, Value(1))),
@@ -153,7 +180,7 @@ if (a == b) \{\
 \}}"#,
         );
         assert_eq!(
-            tokens,
+            tokens.unwrap(),
             vec![
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((FontSize, Value(24))),
@@ -181,7 +208,7 @@ if (a == b) \{\
         let text = r"{\*\expandedcolortbl;;}";
         let tokens = Lexer::scan(text);
         assert_eq!(
-            tokens,
+            tokens.unwrap(),
             vec![OpeningBracket, IgnorableDestination, ControlSymbol((Unknown(r"\expandedcolortbl;"), None)), ClosingBracket,]
         )
     }
@@ -191,7 +218,7 @@ if (a == b) \{\
         let text = r"{\red255\blue255;}";
         let tokens = Lexer::scan(text);
         assert_eq!(
-            tokens,
+            tokens.unwrap(),
             vec![OpeningBracket, ControlSymbol((Unknown(r"\red"), Value(255))), ControlSymbol((Unknown(r"\blue"), Value(255))), ClosingBracket]
         );
     }

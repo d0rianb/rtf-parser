@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::mem;
+use std::{fmt, mem};
 use crate::document::RtfDocument;
 
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
@@ -26,6 +26,34 @@ pub struct Painter {
     pub underline: bool,
 }
 
+pub enum ParserError {
+    InvalidToken(String),
+    IgnorableDestinationParsingError,
+    MalformedPainterStack,
+    InvalidFontIdentifier(Property),
+    NoMoreToken,
+}
+
+impl fmt::Display for ParserError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _ = write!(f, "[RTF Parser] : ");
+        let _ = match self {
+            ParserError::InvalidToken(msg) => write!(f, "{}", msg),
+            ParserError::IgnorableDestinationParsingError => write!(f, "No ignorable destination should be left"),
+            ParserError::MalformedPainterStack => write!(f, "Malformed painter stack"),
+            ParserError::InvalidFontIdentifier(property) => write!(f, "Invalid font identifier : {:?}", property),
+            ParserError::NoMoreToken => write!(f, "No more token to parse"),
+        };
+        return Ok(());
+    }
+}
+
+impl fmt::Debug for ParserError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        return write!(f, "{}", self);
+    }
+}
+
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
     cursor: usize,
@@ -36,17 +64,28 @@ impl<'a> Parser<'a> {
         Self { tokens, cursor: 0 }
     }
 
-    fn check_document_validity(&self) {
+    fn check_document_validity(&self) -> Result<(), ParserError> {
         // Check the document boundaries
-        assert_eq!(self.tokens.first().expect("Unable to retrieve first token"), &Token::OpeningBracket, "Invalid first token : not a {{");
-        assert_eq!(self.tokens.last().expect("Unable to retrieve last token"), &Token::ClosingBracket, "Invalid last token : not a }}");
+        if let Some(token) = self.tokens.first() {
+            if token != &Token::OpeningBracket { return Err(ParserError::InvalidToken(format!("Invalid first token : {:?} not a '{{'", token))); }
+        } else {
+            return Err(ParserError::NoMoreToken);
+        }
+        if let Some(token) = self.tokens.last() {
+            if token != &Token::ClosingBracket { return Err(ParserError::InvalidToken(format!("Invalid last token : {:?} not a '}}'", token))); }
+        } else {
+            return Err(ParserError::NoMoreToken);
+        }
+        return Ok(());
     }
 
-    pub fn parse(&mut self) -> RtfDocument<'a> {
-        self.check_document_validity();
+    pub fn parse(&mut self) -> Result<RtfDocument<'a>, ParserError> {
+        if let Err(error) = self.check_document_validity() {
+            return Err(error)
+        }
         let mut document = RtfDocument::default(); // Init empty document
         self.parse_ignore_groups(); // delete the ignore groups
-        document.header = self.parse_header();
+        document.header = self.parse_header()?;
         // Parse Body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
         let mut it = self.tokens.iter();
@@ -56,10 +95,13 @@ impl<'a> Parser<'a> {
                     painter_stack.push(Painter::default());
                 }
                 Token::ClosingBracket => {
-                    let _ = painter_stack.pop().expect("[Parser] : Empty painter stack : Too many closing brackets");
+                    let painter = painter_stack.pop();
+                    if painter == None {
+                        return Err(ParserError::MalformedPainterStack);
+                    }
                 }
                 Token::ControlSymbol((control_word, property)) => {
-                    let current_painter = painter_stack.last_mut().expect("[Parser] : Malformed painter stack");
+                    let Some(current_painter) = painter_stack.last_mut() else { return Err(ParserError::MalformedPainterStack); };
                     match control_word {
                         ControlWord::FontNumber => current_painter.font_ref = property.get_value() as u16,
                         ControlWord::Bold => { current_painter.bold = property.as_bool(); }
@@ -69,9 +111,9 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Token::PlainText(text) => {
-                    let current_painter = painter_stack.last().expect("[Parser] : Empty painter stack : Too many closing brackets");
+                    let Some(current_painter) = painter_stack.last() else { return Err(ParserError::MalformedPainterStack); };
                     let last_style_group = document.body.last_mut();
-                    // If the painter is the same than the previous one, merge the two block.
+                    // If the painter is the same as the previous one, merge the two block.
                     if let Some(group) = last_style_group {
                         if group.painter.eq(current_painter) {
                             group.text.push_str(text);
@@ -87,7 +129,7 @@ impl<'a> Parser<'a> {
                 Token::CRLF => {
                     let text = "\n";
                     let last_style_group = document.body.last_mut();
-                    // If the painter is the same than the previous one, merge the two block.
+                    // If the painter is the same as the previous one, merge the two block.
                     if let Some(group) = last_style_group {
                         group.text.push_str(text);
                     } else {
@@ -99,11 +141,11 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Token::IgnorableDestination => {
-                    panic!("[Parser] : No ignorable destination should be left");
+                    return Err(ParserError::IgnorableDestinationParsingError);
                 }
             }
         }
-        return document;
+        return Ok(document);
     }
 
     fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> {
@@ -159,14 +201,14 @@ impl<'a> Parser<'a> {
     }
 
     // Consume all tokens until the header is read
-    fn parse_header(&mut self) -> RtfHeader<'a> {
+    fn parse_header(&mut self) -> Result<RtfHeader<'a>, ParserError> {
         self.cursor = 0; // Reset the cursor
         let mut header = RtfHeader::default();
         while let (token, next_token) = (self.consume_next_token(), self.get_next_token()) {
             match (token, next_token) {
                 (Some(Token::OpeningBracket), Some(&header_control_word!(FontTable, None))) => {
                     let font_table_tokens = self.consume_tokens_until_matching_bracket();
-                    header.font_table = Self::parse_font_table(&font_table_tokens);
+                    header.font_table = Self::parse_font_table(&font_table_tokens)?;
                 }
                 // Break on par, pard, sectd, or plain
                 (Some(header_control_word!(Pard)
@@ -174,7 +216,7 @@ impl<'a> Parser<'a> {
                   | header_control_word!(Plain)
                   | header_control_word!(Par)
                 ), _) => break,
-                // Break if it declare a font after the font table --> no more in the header
+                // Break if it declares a font after the font table --> no more in the header
                 // (Some(header_control_word!(FontNumber)), _) => if !header.font_table.is_empty() { break; },
                 (Some(ref token), _) => {
                     if let Some(charset) = CharacterSet::from(token) {
@@ -185,11 +227,14 @@ impl<'a> Parser<'a> {
                 (_, _) => {}
             }
         }
-        return header;
+        return Ok(header);
     }
 
-    fn parse_font_table(font_tables_tokens: &Vec<Token<'a>>) -> FontTable<'a> {
-        assert_eq!(font_tables_tokens.get(0), Some(&header_control_word!(FontTable, None)));
+    fn parse_font_table(font_tables_tokens: &Vec<Token<'a>>) -> Result<FontTable<'a>, ParserError> {
+        let Some(font_table_first_token) = font_tables_tokens.get(0) else { return Err(ParserError::NoMoreToken) };
+        if font_table_first_token != &header_control_word!(FontTable, None) {
+            return Err(ParserError::InvalidToken(format!("{:?} is not a FontTable token", font_table_first_token)));
+        }
         let mut table = HashMap::new();
         let mut current_key = 0;
         let mut current_font = Font::default();
@@ -202,7 +247,7 @@ impl<'a> Parser<'a> {
                         if let Property::Value(key) = property {
                             current_key = *key as FontRef;
                         } else {
-                            panic!("[Parser] Invalid font identifier : {:?}", property)
+                            return Err(ParserError::InvalidFontIdentifier(*property));
                         }
                     }
                     ControlWord::Unknown(name) => {
@@ -221,7 +266,7 @@ impl<'a> Parser<'a> {
                 _ => {}
             }
         }
-        return table;
+        return Ok(table);
     }
 
     // Delete the ignore groups
@@ -249,8 +294,8 @@ pub mod tests {
 
     #[test]
     fn parser_simple_test() {
-        let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#);
-        let doc = Parser::new(tokens).parse();
+        let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#).unwrap();
+        let doc = Parser::new(tokens).parse().unwrap();
         assert_eq!(
             doc.header,
             RtfHeader {
@@ -315,15 +360,15 @@ pub mod tests {
             \highlight3 while this line has a \cf2 red \cf1 word and is highlighted in yellow\highlight0\line
             Finally, back to the default color.\line
             }";
-        let tokens = Lexer::scan(document);
-        let doc = Parser::new(tokens).parse();
+        let tokens = Lexer::scan(document).unwrap();
+        let doc = Parser::new(tokens).parse().unwrap();
     }
 
     #[test]
     fn parse_entire_file_header() {
         let file_content = include_test_file!("test-file.rtf");
-        let tokens = Lexer::scan(file_content);
-        let doc = Parser::new(tokens).parse();
+        let tokens = Lexer::scan(file_content).unwrap();
+        let doc = Parser::new(tokens).parse().unwrap();
         assert_eq!(
             doc.header,
             RtfHeader {
@@ -353,19 +398,19 @@ pub mod tests {
     #[test]
     fn parse_ignore_group_test() {
         let rtf = r"{\*\expandedcolortbl;;}";
-        let tokens = Lexer::scan(rtf);
+        let tokens = Lexer::scan(rtf).unwrap();
         let mut parser = Parser::new(tokens);
-        let document = parser.parse();
-        assert_eq!(parser.tokens, vec![]); // Should have consume all the tokens
+        let document = parser.parse().unwrap();
+        assert_eq!(parser.tokens, vec![]); // Should have consumed all the tokens
         assert_eq!(document.header, RtfHeader::default());
     }
 
     #[test]
     fn parse_whitespaces() {
         let file_content = include_test_file!("list-item.rtf");
-        let tokens = Lexer::scan(file_content);
+        let tokens = Lexer::scan(file_content).unwrap();
         let mut parser = Parser::new(tokens);
-        let document = parser.parse();
+        let document = parser.parse().unwrap();
         assert_eq!(
             document.body,
             vec![
@@ -387,7 +432,7 @@ pub mod tests {
     fn parse_image_data() {
         // Try to parse without error
         let rtf_content = include_test_file!("file-with-image.rtf");
-        let tokens = Lexer::scan(rtf_content);
+        let tokens = Lexer::scan(rtf_content).unwrap();
         let _document = Parser::new(tokens).parse();
     }
 }

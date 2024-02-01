@@ -10,13 +10,13 @@ To use it :
 ```rust
 use rtf_parser::{Lexer, Parser, Token};
 
-let tokens: Vec<Token> = Lexer::scan("<rtf>");
+let tokens: Vec<Token> = Lexer::scan("<rtf>")?;
 ```
 
 These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.
 ```rust
-let parser = Parser::new(tokens);
-let doc: RtfDocument = parser.parse();
+let parser = Parser::new(tokens)?;
+let doc: RtfDocument = parser.parse()?;
 ```
 
 An `RtfDocument` is composed with : 
@@ -40,8 +40,8 @@ Tou can also extract the text without any formatting information, with the `to_t
 
 ```rust
 let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
-let tokens = Lexer::scan(rtf);
-let document = Parser::new(tokens);
+let tokens = Lexer::scan(rtf)?;
+let document = Parser::new(tokens)?;
 let text = document.to_text();
 assert_eq!(text, "Voici du texte en gras.");
 ```
@@ -52,8 +52,8 @@ A complete example of rtf parsing is presented below :
 use rtf_parser::{Lexer, Parser};
 
 let rtf_text = r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#;
-let tokens = Lexer::scan(rtf_text);
-let doc = Parser::new(tokens).parse();
+let tokens = Lexer::scan(rtf_text)?;
+let doc = Parser::new(tokens).parse()?;
 
 assert_eq!(
     doc.header,

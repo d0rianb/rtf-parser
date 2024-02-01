@@ -1,4 +1,5 @@
 use std::fmt;
+use crate::LexerError;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Clone)]
@@ -26,7 +27,7 @@ impl<'a> fmt::Debug for Token<'a> {
 }
 
 // A control symbol is a pair (control_word, property)
-// In the RTF specification, it refer to 'control word entity'
+// In the RTF specification, it refers to 'control word entity'
 pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 
 // Parameters for a control word
@@ -83,7 +84,7 @@ pub enum ControlWord<'a> {
 }
 
 impl<'a> ControlWord<'a> {
-    pub fn from(input: &str) -> ControlSymbol {
+    pub fn from(input: &str) -> Result<ControlSymbol, LexerError> {
         // Loop backward the string to get the number
         let mut it = input.chars().rev();
         let mut suffix_index = 0;
@@ -104,7 +105,8 @@ impl<'a> ControlWord<'a> {
         let property = if suffix == "" {
             Property::None
         } else {
-            Property::Value(suffix.parse::<i32>().expect(&format!("[Lexer] Unable to parse {} as integer", &suffix)))
+            let Ok(value) = suffix.parse::<i32>() else { return Err(LexerError::Error(format!("[Lexer] Unable to parse {} as integer", &suffix))); };
+            Property::Value(value)
         };
 
         let control_word = match prefix {
@@ -125,7 +127,7 @@ impl<'a> ControlWord<'a> {
             r"\plain" => ControlWord::Plain,
             _ => ControlWord::Unknown(prefix),
         };
-        return (control_word, property);
+        return Ok((control_word, property));
     }
 }
 
@@ -136,12 +138,12 @@ mod tests {
     #[test]
     fn control_word_from_input_test() {
         let input = r"\rtf1";
-        assert_eq!(ControlWord::from(input), (ControlWord::Rtf, Property::Value(1)))
+        assert_eq!(ControlWord::from(input).unwrap(), (ControlWord::Rtf, Property::Value(1)))
     }
 
     #[test]
     fn control_word_with_negative_parameter() {
         let input = r"\rtf-1";
-        assert_eq!(ControlWord::from(input), (ControlWord::Rtf, Property::Value(-1)))
+        assert_eq!(ControlWord::from(input).unwrap(), (ControlWord::Rtf, Property::Value(-1)))
     }
 }

@@ -13,7 +13,7 @@ mod utils;
 
 // Public API of the crate
 pub use crate::header::{CharacterSet, RtfHeader, FontFamily};
-pub use crate::lexer::Lexer;
-pub use crate::parser::{Painter, Parser, StyleBlock};
+pub use crate::lexer::{Lexer, LexerError};
+pub use crate::parser::{Painter, Parser, ParserError, StyleBlock};
 pub use crate::document::RtfDocument;
 pub use crate::tokens::{Token, ControlSymbol, ControlWord, Property};
