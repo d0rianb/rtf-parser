@@ -278,9 +278,8 @@ impl<'a> Parser<'a> {
                     self.consume_token_at(self.cursor); // Consume the opening bracket
                     self.consume_tokens_until_matching_bracket();
                 }
-                _ => {}
+                _ => {self.cursor += 1;}
             }
-            self.cursor += 1;
         }
     }
 }
