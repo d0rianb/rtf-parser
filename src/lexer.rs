@@ -61,7 +61,6 @@ impl Lexer {
         // Manage last token (should always be "}")
         if slice_start_index < current_index {
             let slice = &src[slice_start_index..current_index];
-            assert_eq!(slice, "}", "[Lexer] Invalid last char, should be '}}'");
             if slice != "}" {
                 return Err(LexerError::InvalidLastChar);
             }
