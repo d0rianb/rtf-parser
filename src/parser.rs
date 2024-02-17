@@ -103,10 +103,11 @@ impl<'a> Parser<'a> {
                 Token::ControlSymbol((control_word, property)) => {
                     let Some(current_painter) = painter_stack.last_mut() else { return Err(ParserError::MalformedPainterStack); };
                     match control_word {
-                        ControlWord::FontNumber => current_painter.font_ref = property.get_value() as u16,
-                        ControlWord::Bold => { current_painter.bold = property.as_bool(); }
-                        ControlWord::Italic => { current_painter.italic = property.as_bool(); }
-                        ControlWord::Underline => { current_painter.underline = property.as_bool(); }
+                        ControlWord::FontNumber  => current_painter.font_ref = property.get_value() as FontRef,
+                        ControlWord::FontSize    => current_painter.font_size = property.get_value() as u16,
+                        ControlWord::Bold        => current_painter.bold = property.as_bool(),
+                        ControlWord::Italic      => current_painter.italic = property.as_bool(),
+                        ControlWord::Underline   => current_painter.underline = property.as_bool(),
                         _ => {}
                     }
                 }
@@ -152,7 +153,7 @@ impl<'a> Parser<'a> {
         return self.tokens.get(index);
     }
 
-    // get a reference of the next token after cursor
+    // Get a view of the next token after cursor
     fn get_next_token(&'a self) -> Option<&'a Token<'a>> {
         return self.get_token_at(self.cursor);
     }
@@ -210,14 +211,14 @@ impl<'a> Parser<'a> {
                     let font_table_tokens = self.consume_tokens_until_matching_bracket();
                     header.font_table = Self::parse_font_table(&font_table_tokens)?;
                 }
-                // Break on par, pard, sectd, or plain
+                // Break on par, pard, sectd, or plain - We no longer are in the header
                 (Some(header_control_word!(Pard)
                   | header_control_word!(Sectd)
                   | header_control_word!(Plain)
                   | header_control_word!(Par)
                 ), _) => break,
                 // Break if it declares a font after the font table --> no more in the header
-                // (Some(header_control_word!(FontNumber)), _) => if !header.font_table.is_empty() { break; },
+                (Some(header_control_word!(FontNumber)), _) => if !header.font_table.is_empty() { break; },
                 (Some(ref token), _) => {
                     if let Some(charset) = CharacterSet::from(token) {
                         header.character_set = charset;
@@ -421,8 +422,19 @@ pub mod tests {
                         italic: false,
                         underline: false,
                     },
-                    text: "\n\nEmpty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into()
-                }
+                    text: "\n\n".into(),
+                },
+                StyleBlock {
+                    painter: Painter {
+                        font_ref: 0,
+                        font_size: 24,
+                        bold: false,
+                        italic: false,
+                        underline: false,
+                    },
+                    text: "Empty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into(),
+                },
+
             ]
         );
     }
@@ -433,5 +445,29 @@ pub mod tests {
         let rtf_content = include_test_file!("file-with-image.rtf");
         let tokens = Lexer::scan(rtf_content).unwrap();
         let _document = Parser::new(tokens).parse();
+    }
+
+    #[test]
+    fn parse_header_and_body() {
+        let rtf = r#"{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Bold;\f1\froman\fcharset0 Times-Roman;\f2\froman\fcharset0 Times-Italic;
+\f3\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue10;\red0\green0\blue1;\red191\green191\blue191;
+}
+\f0\b\fs21 \cf2 Lorem ipsum
+\fs56 \
+\pard\pardeftab709\sl288\slmult1\sa225\qj\partightenfactor0
+
+\f1\b0\fs21 \cf0 \
+\pard\pardeftab709\fi-432\ri-1\sb240\sa120\partightenfactor0
+\ls1\ilvl0
+\f0\b\fs36 \cf2 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \
+\pard\pardeftab709\sl288\slmult1\sa225\qj\partightenfactor0
+}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(document.body[0].text, "Lorem ipsum\n\n");
+        assert_eq!(document.body[1].text, "\n\n");
+        assert_eq!(document.body[2].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
     }
 }

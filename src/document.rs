@@ -37,7 +37,7 @@ impl<'a> RtfDocument<'a> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::{Lexer, Parser, RtfDocument};
+    use crate::{include_test_file, Lexer, Parser, RtfDocument};
 
     #[test]
     fn test_get_text() {

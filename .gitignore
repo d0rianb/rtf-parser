@@ -4,3 +4,5 @@
 
 /flamegraph.svg
 /*.csv
+tests/*
+TODO.txt

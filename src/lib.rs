@@ -1,6 +1,7 @@
 // RTF parser for Text Editor
 // Support RTF version 1.9.1
 // specification is available here : https://dokumen.tips/documents/rtf-specification.html
+// Miscroft specification is : https://learn.microsoft.com/en-us/previous-versions/office/office-10/aa140283(v=office.10)
 
 #![allow(irrefutable_let_patterns)]
 
