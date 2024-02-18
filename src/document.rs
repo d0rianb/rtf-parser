@@ -2,8 +2,8 @@ use crate::header::RtfHeader;
 use crate::{Lexer, Parser, StyleBlock};
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct RtfDocument<'a> {
-    pub header: RtfHeader<'a>,
+pub struct RtfDocument {
+    pub header: RtfHeader,
     pub body: Vec<StyleBlock>,
 }
 
@@ -25,7 +25,7 @@ pub struct RtfDocument<'a> {
 //     }
 // }
 
-impl<'a> RtfDocument<'a> {
+impl RtfDocument {
     pub fn get_text(&self) -> String {
         let mut result = String::new();
         for style_block in &self.body {

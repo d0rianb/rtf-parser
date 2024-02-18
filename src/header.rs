@@ -2,17 +2,17 @@ use std::collections::HashMap;
 use crate::tokens::{ControlWord, Token};
 
 pub type FontRef = u16;
-pub type FontTable<'a> = HashMap<FontRef, Font<'a>>;
+pub type FontTable = HashMap<FontRef, Font>;
 
 #[derive(Default, Debug, Clone, PartialEq)]
-pub struct RtfHeader<'a> {
+pub struct RtfHeader {
     pub character_set: CharacterSet,
-    pub font_table: FontTable<'a>,
+    pub font_table: FontTable,
 }
 
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
-pub struct Font<'a> {
-    pub name: &'a str,
+pub struct Font {
+    pub name: String,
     pub character_set: u8,
     pub font_family: FontFamily,
 }

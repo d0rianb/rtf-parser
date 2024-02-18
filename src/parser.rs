@@ -79,7 +79,7 @@ impl<'a> Parser<'a> {
         return Ok(());
     }
 
-    pub fn parse(&mut self) -> Result<RtfDocument<'a>, ParserError> {
+    pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         if let Err(error) = self.check_document_validity() {
             return Err(error)
         }
@@ -202,7 +202,7 @@ impl<'a> Parser<'a> {
     }
 
     // Consume all tokens until the header is read
-    fn parse_header(&mut self) -> Result<RtfHeader<'a>, ParserError> {
+    fn parse_header(&mut self) -> Result<RtfHeader, ParserError> {
         self.cursor = 0; // Reset the cursor
         let mut header = RtfHeader::default();
         while let (token, next_token) = (self.consume_next_token(), self.get_next_token()) {
@@ -231,7 +231,7 @@ impl<'a> Parser<'a> {
         return Ok(header);
     }
 
-    fn parse_font_table(font_tables_tokens: &Vec<Token<'a>>) -> Result<FontTable<'a>, ParserError> {
+    fn parse_font_table(font_tables_tokens: &Vec<Token<'a>>) -> Result<FontTable, ParserError> {
         let Some(font_table_first_token) = font_tables_tokens.get(0) else { return Err(ParserError::NoMoreToken) };
         if font_table_first_token != &header_control_word!(FontTable, None) {
             return Err(ParserError::InvalidToken(format!("{:?} is not a FontTable token", font_table_first_token)));
@@ -259,7 +259,7 @@ impl<'a> Parser<'a> {
                     _ => {}
                 },
                 Token::PlainText(name) => {
-                    current_font.name = name.trim_end_matches(';');
+                    current_font.name = name.trim_end_matches(';').to_string();
                 }
                 Token::ClosingBracket => {
                     table.insert(current_key, current_font.clone());
@@ -303,7 +303,7 @@ pub mod tests {
                 font_table: FontTable::from([(
                     0,
                     Font {
-                        name: "Helvetica",
+                        name: "Helvetica".into(),
                         character_set: 0,
                         font_family: Swiss
                     }
@@ -377,7 +377,7 @@ pub mod tests {
                     (
                         0,
                         Font {
-                            name: "Helvetica",
+                            name: "Helvetica".into(),
                             character_set: 0,
                             font_family: Swiss,
                         }
@@ -385,7 +385,7 @@ pub mod tests {
                     (
                         1,
                         Font {
-                            name: "Helvetica-Bold",
+                            name: "Helvetica-Bold".into(),
                             character_set: 0,
                             font_family: Swiss,
                         }
