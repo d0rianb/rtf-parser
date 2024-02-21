@@ -38,6 +38,34 @@ macro_rules! include_test_file {
     };
 }
 
+// Recursive call to the tokenize method of the lexer
+#[macro_export]
+macro_rules! recursive_tokenize {
+    ($tail:expr) => {
+        Lexer::tokenize($tail)
+    };
+    ($tail:expr, $ret:expr) => {
+        if $tail.len() > 0 {
+            if let Ok(tail_tokens) = Lexer::tokenize($tail) {
+                // Push all the tokens in the result vector
+                for token in tail_tokens {
+                    $ret.push(token);
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! recursive_tokenize_with_init {
+    ($init:expr, $tail:expr) => {
+        {
+            let mut ret = vec![$init];
+            recursive_tokenize!($tail, ret);
+            return Ok(ret);
+        }
+    };
+}
 
 #[cfg(test)]
 mod test {

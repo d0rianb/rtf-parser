@@ -2,6 +2,7 @@ use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
 
 use std::fmt;
+use crate::{recursive_tokenize, recursive_tokenize_with_init};
 
 pub enum LexerError {
     Error(String),
@@ -36,10 +37,10 @@ impl Lexer {
         let mut previous_char = ' ';
         while let Some(c) = it.next() {
             match c {
-                // Handle Escaped chars
                 // TODO: Handle char over code 127 for escaped chars
-                '{' | '}' | '\\' if previous_char == '\\' => {}
-                '{' | '}' | '\\' => {
+                // Handle Escaped chars : "\" + any charcode below 127
+                '{' | '}' | '\\' | '\n' if previous_char == '\\' => {}
+                '{' | '}' | '\\' | '\n' => {
                     // End of slice chars
                     if slice_start_index < current_index {
                         // Close slice
@@ -72,21 +73,19 @@ impl Lexer {
     /// Get a string slice cut but the scanner and return the coreesponding token(s)
     fn tokenize(slice: &str) -> Result<Vec<Token>, LexerError> {
         let mut starting_chars = slice.trim_matches(' ').chars().take(2);
-        return  match (starting_chars.next(), starting_chars.next()) {
+        return match (starting_chars.next(), starting_chars.next()) {
             // If it starts with \ : escaped text or control word
             (Some('\\'), Some(c)) => match c {
                 '{' | '}' | '\\' => {
                     // Handle escaped chars
                     let tail = slice.get(1..).unwrap_or("");
-                    return Ok(vec![Token::PlainText(tail)]);
+                    return Ok(vec![Token::PlainText(tail)]); // No recursive tokenize here, juste some plain text because the char is escaped
                 }
                 '\n' => {
                     // CRLF
                     let mut ret = vec![Token::CRLF];
                     if let Some(tail) = slice.get(2..) {
-                        if tail != "" {
-                            ret.push(Token::PlainText(tail))
-                        }
+                        recursive_tokenize!(tail, ret);
                     }
                     return Ok(ret);
                 }
@@ -98,27 +97,24 @@ impl Lexer {
                     ident = if ident.chars().last().unwrap_or(' ') == ';' { &ident[0..ident.len() - 1] } else { ident };
                     let control_word = ControlWord::from(ident)?;
                     let mut ret = vec![Token::ControlSymbol(control_word)];
-                    if tail.len() > 0 {
-                        ret.push(Token::PlainText(tail));
-                    }
+                    recursive_tokenize!(tail, ret);
                     return Ok(ret);
                 }
                 '*' => Ok(vec![Token::IgnorableDestination]),
                 _ => Ok(vec![]),
             },
+            (Some('\n'), Some(_)) => recursive_tokenize!(&slice[1..]), // Ignore the CRLF if it's not escaped
             // Handle brackets
             (Some('{'), None) => Ok(vec![Token::OpeningBracket]),
             (Some('}'), None) => Ok(vec![Token::ClosingBracket]),
-            (Some('{'), Some(_)) => Ok(vec![Token::OpeningBracket, Token::PlainText(&slice[1..])]),
-            (Some('}'), Some(_)) => Ok(vec![Token::ClosingBracket, Token::PlainText(&slice[1..])]),
+            (Some('{'), Some(_)) => recursive_tokenize_with_init!(Token::OpeningBracket, &slice[1..]),
+            (Some('}'), Some(_)) => recursive_tokenize_with_init!(Token::ClosingBracket, &slice[1..]),
             (None, None) => Err(LexerError::Error(format!("Empty token {}", &slice))),
             // Else, it's plain text
             _ => {
                 let text = slice.trim();
-                if text == "" {
-                    return Ok(vec![]);
-                }
-                return Ok(vec![Token::PlainText(slice.trim())]);
+                if text == "" { return Ok(vec![]); }
+                return Ok(vec![Token::PlainText(slice)]);
             }
         };
     }
@@ -220,5 +216,32 @@ if (a == b) \{\
             tokens.unwrap(),
             vec![OpeningBracket, ControlSymbol((Unknown(r"\red"), Value(255))), ControlSymbol((Unknown(r"\blue"), Value(255))), ClosingBracket]
         );
+    }
+
+    #[test]
+    fn should_parse_line_return() {
+        // From Microsoft's reference: "A carriage return (character value 13) or linefeed (character value 10)
+        // will be treated as a \par control if the character is preceded by a backslash.
+        // You must include the backslash; otherwise, RTF ignores the control word."
+        let text = r#"{\partightenfactor0
+
+\fs24 \cf0 Font size 12,
+\f0\b bold text. \ul Underline,bold text.\
+ }"#;
+        let tokens = Lexer::scan(text).unwrap();
+        assert_eq!(tokens, [
+            OpeningBracket,
+            ControlSymbol((Unknown("\\partightenfactor"), Value(0))),
+            ControlSymbol((FontSize, Value(24))),
+            ControlSymbol((Unknown("\\cf"), Value(0))),
+            PlainText("Font size 12,"),
+            ControlSymbol((FontNumber, Value(0))),
+            ControlSymbol((Bold, None)),
+            PlainText("bold text. "),
+            ControlSymbol((Unknown("\\ul"), None)),
+            PlainText("Underline,bold text."),
+            CRLF,
+            ClosingBracket
+        ]);
     }
 }

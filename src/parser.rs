@@ -128,6 +128,7 @@ impl<'a> Parser<'a> {
                     });
                 }
                 Token::CRLF => {
+                    // heck for previous token to see if this is text of not
                     let text = "\n";
                     let last_style_group = document.body.last_mut();
                     // If the painter is the same as the previous one, merge the two block.
@@ -422,7 +423,7 @@ pub mod tests {
                         italic: false,
                         underline: false,
                     },
-                    text: "\n\n".into(),
+                    text: "\n".into(),
                 },
                 StyleBlock {
                     painter: Painter {
@@ -467,7 +468,6 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(document.body[0].text, "Lorem ipsum\n\n");
-        assert_eq!(document.body[1].text, "\n\n");
-        assert_eq!(document.body[2].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
+        assert_eq!(document.body[1].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
     }
 }
