@@ -30,6 +30,7 @@ pub struct Lexer;
 
 impl Lexer {
     pub fn scan(src: &str) -> Result<Vec<Token>, LexerError> {
+        let src = src.trim(); // Sanitize src : Trim the leading whitespaces
         let mut it = src.chars();
         let mut tokens: Vec<Token> = vec![];
         let mut slice_start_index = 0;
@@ -60,6 +61,7 @@ impl Lexer {
             previous_char = c;
         }
         // Manage last token (should always be "}")
+        // TODO: Handle the case where the last char is a line return
         if slice_start_index < current_index {
             let slice = &src[slice_start_index..current_index];
             if slice != "}" {
@@ -216,6 +218,14 @@ if (a == b) \{\
             tokens.unwrap(),
             vec![OpeningBracket, ControlSymbol((Unknown(r"\red"), Value(255))), ControlSymbol((Unknown(r"\blue"), Value(255))), ClosingBracket]
         );
+    }
+
+    #[test]
+    fn lex_with_leading_whitespaces() {
+        // Try to parse without error
+        let rtf_content = "\t {\\rtf1 }\n "; // Not raw str for the whitespace to be trimed
+        let tokens = Lexer::scan(rtf_content).unwrap();
+        assert_eq!(tokens, vec![OpeningBracket, ControlSymbol((Rtf, Value(1))), ClosingBracket]);
     }
 
     #[test]

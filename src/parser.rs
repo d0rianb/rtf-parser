@@ -470,4 +470,5 @@ pub mod tests {
         assert_eq!(document.body[0].text, "Lorem ipsum\n\n");
         assert_eq!(document.body[1].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
     }
+
 }
