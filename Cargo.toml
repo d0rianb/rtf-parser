@@ -9,4 +9,8 @@ keywords = ["rtf", "rich" ,"text", "format", "parser"]
 categories = ["parsing", "parser-implementations"]
 exclude = ["*.rtf", ".idea"]
 
+[profile.release]
+lto = true
+opt-level = 3
+
 [dependencies]
