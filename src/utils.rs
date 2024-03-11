@@ -58,13 +58,11 @@ macro_rules! recursive_tokenize {
 
 #[macro_export]
 macro_rules! recursive_tokenize_with_init {
-    ($init:expr, $tail:expr) => {
-        {
-            let mut ret = vec![$init];
-            recursive_tokenize!($tail, ret);
-            return Ok(ret);
-        }
-    };
+    ($init:expr, $tail:expr) => {{
+        let mut ret = vec![$init];
+        recursive_tokenize!($tail, ret);
+        return Ok(ret);
+    }};
 }
 
 #[cfg(test)]

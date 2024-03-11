@@ -44,9 +44,6 @@ pub(crate) mod tests {
         let rtf = r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(
-            document.get_text(),
-            "Voici du texte en gras."
-        )
+        assert_eq!(document.get_text(), "Voici du texte en gras.")
     }
 }

@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::tokens::{ControlWord, Token};
+use std::collections::HashMap;
 
 pub type FontRef = u16;
 pub type FontTable = HashMap<FontRef, Font>;
@@ -33,7 +33,7 @@ impl CharacterSet {
         match token {
             Token::ControlSymbol((ControlWord::Ansi, _)) => Some(Self::Ansi),
             // TODO: implement the rest
-            _ => None
+            _ => None,
         }
     }
 }
@@ -52,7 +52,6 @@ pub enum FontFamily {
     Bidi,
 }
 
-
 impl FontFamily {
     pub fn from(string: &str) -> Option<Self> {
         match string {
@@ -60,8 +59,7 @@ impl FontFamily {
             r"\froman" => Some(Self::Roman),
             r"\fswiss" => Some(Self::Swiss),
             // TODO: implement the rest
-            _ => None
+            _ => None,
         }
     }
 }
-

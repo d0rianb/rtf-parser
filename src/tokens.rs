@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::LexerError;
+use std::fmt;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Clone)]
@@ -7,8 +7,8 @@ pub enum Token<'a> {
     PlainText(&'a str),
     OpeningBracket,
     ClosingBracket,
-    CRLF,  // Line-return \n
-    IgnorableDestination,  // \*\ <destination-name>
+    CRLF,                 // Line-return \n
+    IgnorableDestination, // \*\ <destination-name>
     ControlSymbol(ControlSymbol<'a>),
 }
 
@@ -21,7 +21,7 @@ impl<'a> fmt::Debug for Token<'a> {
             Token::ClosingBracket => write!(f, "ClosingBracket"),
             Token::CRLF => write!(f, "CRLF"),
             Token::IgnorableDestination => write!(f, "IgnorableDestination"),
-            Token::ControlSymbol(symbol) => write!(f, "ControlSymbol : {:?}", symbol)
+            Token::ControlSymbol(symbol) => write!(f, "ControlSymbol : {:?}", symbol),
         }
     }
 }
@@ -34,10 +34,10 @@ pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Property {
-    On, // 1
-    Off, // 0
+    On,         // 1
+    Off,        // 0
     Value(i32), // Specified as i32 in the specification
-    None, // No parameter
+    None,       // No parameter
 }
 
 impl Property {
@@ -46,7 +46,7 @@ impl Property {
             Property::On => true,
             Property::Off => false,
             Property::None => true,
-            Property::Value(val) => *val == 1
+            Property::Value(val) => *val == 1,
         }
     }
 
@@ -105,7 +105,9 @@ impl<'a> ControlWord<'a> {
         let property = if suffix == "" {
             Property::None
         } else {
-            let Ok(value) = suffix.parse::<i32>() else { return Err(LexerError::Error(format!("[Lexer] Unable to parse {} as integer", &suffix))); };
+            let Ok(value) = suffix.parse::<i32>() else {
+                return Err(LexerError::Error(format!("[Lexer] Unable to parse {} as integer", &suffix)));
+            };
             Property::Value(value)
         };
 

@@ -6,15 +6,15 @@
 #![allow(irrefutable_let_patterns)]
 
 mod document;
-mod tokens;
+mod header;
 mod lexer;
 mod parser;
-mod header;
+mod tokens;
 mod utils;
 
 // Public API of the crate
-pub use crate::header::{CharacterSet, RtfHeader, FontFamily};
+pub use crate::document::RtfDocument;
+pub use crate::header::{CharacterSet, FontFamily, RtfHeader};
 pub use crate::lexer::{Lexer, LexerError};
 pub use crate::parser::{Painter, Parser, ParserError, StyleBlock};
-pub use crate::document::RtfDocument;
-pub use crate::tokens::{Token, ControlSymbol, ControlWord, Property};
+pub use crate::tokens::{ControlSymbol, ControlWord, Property, Token};
