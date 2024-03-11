@@ -1,20 +1,24 @@
+use crate::document::RtfDocument;
 use std::collections::HashMap;
 use std::{fmt, mem};
-use crate::document::RtfDocument;
 
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
 use crate::tokens::{ControlWord, Property, Token};
 
 // Use to specify control word in parse_header
 macro_rules! header_control_word {
-    ($cw:ident) => { Token::ControlSymbol((ControlWord::$cw, _)) };
-    ($cw:ident, $prop:ident) => { Token::ControlSymbol((ControlWord::$cw, Property::$prop)) };
+    ($cw:ident) => {
+        Token::ControlSymbol((ControlWord::$cw, _))
+    };
+    ($cw:ident, $prop:ident) => {
+        Token::ControlSymbol((ControlWord::$cw, Property::$prop))
+    };
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct StyleBlock {
     pub painter: Painter,
-    pub text: String
+    pub text: String,
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -44,15 +48,17 @@ impl fmt::Display for ParserError {
             ParserError::InvalidFontIdentifier(property) => write!(f, "Invalid font identifier : {:?}", property),
             ParserError::NoMoreToken => write!(f, "No more token to parse"),
         };
-        return Ok(());
+        Ok(())
     }
 }
 
 impl fmt::Debug for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return write!(f, "{}", self);
+        write!(f, "{}", self)
     }
 }
+
+impl std::error::Error for ParserError {}
 
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
@@ -67,52 +73,58 @@ impl<'a> Parser<'a> {
     fn check_document_validity(&self) -> Result<(), ParserError> {
         // Check the document boundaries
         if let Some(token) = self.tokens.first() {
-            if token != &Token::OpeningBracket { return Err(ParserError::InvalidToken(format!("Invalid first token : {:?} not a '{{'", token))); }
+            if token != &Token::OpeningBracket {
+                return Err(ParserError::InvalidToken(format!("Invalid first token : {:?} not a '{{'", token)));
+            }
         } else {
             return Err(ParserError::NoMoreToken);
         }
         if let Some(token) = self.tokens.last() {
-            if token != &Token::ClosingBracket { return Err(ParserError::InvalidToken(format!("Invalid last token : {:?} not a '}}'", token))); }
+            if token != &Token::ClosingBracket {
+                return Err(ParserError::InvalidToken(format!("Invalid last token : {:?} not a '}}'", token)));
+            }
         } else {
             return Err(ParserError::NoMoreToken);
         }
-        return Ok(());
+        Ok(())
     }
 
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
-        if let Err(error) = self.check_document_validity() {
-            return Err(error)
-        }
+        self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
         self.parse_ignore_groups(); // delete the ignore groups
         document.header = self.parse_header()?;
         // Parse Body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
-        let mut it = self.tokens.iter();
-        while let Some(token) = it.next() {
+        let it = self.tokens.iter();
+        for token in it {
             match token {
                 Token::OpeningBracket => {
                     painter_stack.push(Painter::default());
                 }
                 Token::ClosingBracket => {
                     let painter = painter_stack.pop();
-                    if painter == None {
+                    if painter.is_none() {
                         return Err(ParserError::MalformedPainterStack);
                     }
                 }
                 Token::ControlSymbol((control_word, property)) => {
-                    let Some(current_painter) = painter_stack.last_mut() else { return Err(ParserError::MalformedPainterStack); };
+                    let Some(current_painter) = painter_stack.last_mut() else {
+                        return Err(ParserError::MalformedPainterStack);
+                    };
                     match control_word {
-                        ControlWord::FontNumber  => current_painter.font_ref = property.get_value() as FontRef,
-                        ControlWord::FontSize    => current_painter.font_size = property.get_value() as u16,
-                        ControlWord::Bold        => current_painter.bold = property.as_bool(),
-                        ControlWord::Italic      => current_painter.italic = property.as_bool(),
-                        ControlWord::Underline   => current_painter.underline = property.as_bool(),
+                        ControlWord::FontNumber => current_painter.font_ref = property.get_value() as FontRef,
+                        ControlWord::FontSize => current_painter.font_size = property.get_value() as u16,
+                        ControlWord::Bold => current_painter.bold = property.as_bool(),
+                        ControlWord::Italic => current_painter.italic = property.as_bool(),
+                        ControlWord::Underline => current_painter.underline = property.as_bool(),
                         _ => {}
                     }
                 }
                 Token::PlainText(text) => {
-                    let Some(current_painter) = painter_stack.last() else { return Err(ParserError::MalformedPainterStack); };
+                    let Some(current_painter) = painter_stack.last() else {
+                        return Err(ParserError::MalformedPainterStack);
+                    };
                     let last_style_group = document.body.last_mut();
                     // If the painter is the same as the previous one, merge the two block.
                     if let Some(group) = last_style_group {
@@ -147,16 +159,16 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        return Ok(document);
+        Ok(document)
     }
 
     fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> {
-        return self.tokens.get(index);
+        self.tokens.get(index)
     }
 
     // Get a view of the next token after cursor
     fn get_next_token(&'a self) -> Option<&'a Token<'a>> {
-        return self.get_token_at(self.cursor);
+        self.get_token_at(self.cursor)
     }
 
     fn consume_token_at(&mut self, index: usize) -> Option<Token<'a>> {
@@ -167,7 +179,7 @@ impl<'a> Parser<'a> {
     }
 
     fn consume_next_token(&mut self) -> Option<Token<'a>> {
-        return self.consume_token_at(self.cursor);
+        self.consume_token_at(self.cursor)
     }
 
     // Consume token from cursor to <reference-token>
@@ -181,7 +193,7 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        return ret;
+        ret
     }
 
     // The opening bracket should already be consumed
@@ -199,7 +211,7 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        return ret;
+        ret
     }
 
     // Consume all tokens until the header is read
@@ -213,13 +225,13 @@ impl<'a> Parser<'a> {
                     header.font_table = Self::parse_font_table(&font_table_tokens)?;
                 }
                 // Break on par, pard, sectd, or plain - We no longer are in the header
-                (Some(header_control_word!(Pard)
-                  | header_control_word!(Sectd)
-                  | header_control_word!(Plain)
-                  | header_control_word!(Par)
-                ), _) => break,
+                (Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par)), _) => break,
                 // Break if it declares a font after the font table --> no more in the header
-                (Some(header_control_word!(FontNumber)), _) => if !header.font_table.is_empty() { break; },
+                (Some(header_control_word!(FontNumber)), _) => {
+                    if !header.font_table.is_empty() {
+                        break;
+                    }
+                }
                 (Some(ref token), _) => {
                     if let Some(charset) = CharacterSet::from(token) {
                         header.character_set = charset;
@@ -229,11 +241,13 @@ impl<'a> Parser<'a> {
                 (_, _) => {}
             }
         }
-        return Ok(header);
+        Ok(header)
     }
 
-    fn parse_font_table(font_tables_tokens: &Vec<Token<'a>>) -> Result<FontTable, ParserError> {
-        let Some(font_table_first_token) = font_tables_tokens.get(0) else { return Err(ParserError::NoMoreToken) };
+    fn parse_font_table(font_tables_tokens: &[Token<'a>]) -> Result<FontTable, ParserError> {
+        let Some(font_table_first_token) = font_tables_tokens.first() else {
+            return Err(ParserError::NoMoreToken);
+        };
         if font_table_first_token != &header_control_word!(FontTable, None) {
             return Err(ParserError::InvalidToken(format!("{:?} is not a FontTable token", font_table_first_token)));
         }
@@ -268,7 +282,7 @@ impl<'a> Parser<'a> {
                 _ => {}
             }
         }
-        return Ok(table);
+        Ok(table)
     }
 
     // Delete the ignore groups
@@ -280,7 +294,9 @@ impl<'a> Parser<'a> {
                     self.consume_token_at(self.cursor); // Consume the opening bracket
                     self.consume_tokens_until_matching_bracket();
                 }
-                _ => {self.cursor += 1;}
+                _ => {
+                    self.cursor += 1;
+                }
             }
         }
     }
@@ -362,7 +378,7 @@ pub mod tests {
             Finally, back to the default color.\line
             }";
         let tokens = Lexer::scan(document).unwrap();
-        let doc = Parser::new(tokens).parse().unwrap();
+        Parser::new(tokens).parse().unwrap();
     }
 
     #[test]
@@ -435,7 +451,6 @@ pub mod tests {
                     },
                     text: "Empty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into(),
                 },
-
             ]
         );
     }
@@ -470,5 +485,4 @@ pub mod tests {
         assert_eq!(document.body[0].text, "Lorem ipsum\n\n");
         assert_eq!(document.body[1].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
     }
-
 }

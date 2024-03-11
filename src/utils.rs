@@ -9,13 +9,11 @@ impl StrUtils for str {
     // ex : split_first_whitespace("\b I'm a bold string") -> ("\b", "I'm a bold string")
     fn split_first_whitespace(&self) -> (&str, &str) {
         let mut first_whitespace_index = 0;
-        let mut it = self.chars();
-        while let Some(c) = it.next() {
+        for c in self.chars() {
             if c.is_whitespace() {
                 break;
-            } else {
-                first_whitespace_index += 1;
             }
+            first_whitespace_index += 1;
         }
         if first_whitespace_index > 0 && first_whitespace_index != self.len() {
             (&self[0..first_whitespace_index], &self[first_whitespace_index + 1..])
@@ -58,13 +56,11 @@ macro_rules! recursive_tokenize {
 
 #[macro_export]
 macro_rules! recursive_tokenize_with_init {
-    ($init:expr, $tail:expr) => {
-        {
-            let mut ret = vec![$init];
-            recursive_tokenize!($tail, ret);
-            return Ok(ret);
-        }
-    };
+    ($init:expr, $tail:expr) => {{
+        let mut ret = vec![$init];
+        recursive_tokenize!($tail, ret);
+        Ok(ret)
+    }};
 }
 
 #[cfg(test)]

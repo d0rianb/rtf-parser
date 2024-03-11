@@ -1,8 +1,8 @@
 use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
 
-use std::fmt;
 use crate::{recursive_tokenize, recursive_tokenize_with_init};
+use std::fmt;
 
 pub enum LexerError {
     Error(String),
@@ -16,27 +16,29 @@ impl fmt::Display for LexerError {
             LexerError::InvalidLastChar => write!(f, "Invalid last char, should be '}}'"),
             LexerError::Error(msg) => write!(f, "{}", msg),
         };
-        return Ok(());
+        Ok(())
     }
 }
 
 impl fmt::Debug for LexerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return write!(f, "{}", self);
+        write!(f, "{}", self)
     }
 }
+
+impl std::error::Error for LexerError {}
 
 pub struct Lexer;
 
 impl Lexer {
     pub fn scan(src: &str) -> Result<Vec<Token>, LexerError> {
         let src = src.trim(); // Sanitize src : Trim the leading whitespaces
-        let mut it = src.chars();
         let mut tokens: Vec<Token> = vec![];
         let mut slice_start_index = 0;
         let mut current_index = 0;
         let mut previous_char = ' ';
-        while let Some(c) = it.next() {
+
+        for c in src.chars() {
             match c {
                 // TODO: Handle char over code 127 for escaped chars
                 // Handle Escaped chars : "\" + any charcode below 127
@@ -69,19 +71,19 @@ impl Lexer {
             }
             tokens.push(Token::ClosingBracket);
         }
-        return Ok(tokens);
+        Ok(tokens)
     }
 
     /// Get a string slice cut but the scanner and return the coreesponding token(s)
     fn tokenize(slice: &str) -> Result<Vec<Token>, LexerError> {
         let mut starting_chars = slice.trim_matches(' ').chars().take(2);
-        return match (starting_chars.next(), starting_chars.next()) {
+        match (starting_chars.next(), starting_chars.next()) {
             // If it starts with \ : escaped text or control word
             (Some('\\'), Some(c)) => match c {
                 '{' | '}' | '\\' => {
                     // Handle escaped chars
                     let tail = slice.get(1..).unwrap_or("");
-                    return Ok(vec![Token::PlainText(tail)]); // No recursive tokenize here, juste some plain text because the char is escaped
+                    Ok(vec![Token::PlainText(tail)]) // No recursive tokenize here, juste some plain text because the char is escaped
                 }
                 '\n' => {
                     // CRLF
@@ -89,7 +91,7 @@ impl Lexer {
                     if let Some(tail) = slice.get(2..) {
                         recursive_tokenize!(tail, ret);
                     }
-                    return Ok(ret);
+                    Ok(ret)
                 }
                 'a'..='z' => {
                     // Identify control word
@@ -100,7 +102,7 @@ impl Lexer {
                     let control_word = ControlWord::from(ident)?;
                     let mut ret = vec![Token::ControlSymbol(control_word)];
                     recursive_tokenize!(tail, ret);
-                    return Ok(ret);
+                    Ok(ret)
                 }
                 '*' => Ok(vec![Token::IgnorableDestination]),
                 _ => Ok(vec![]),
@@ -115,21 +117,22 @@ impl Lexer {
             // Else, it's plain text
             _ => {
                 let text = slice.trim();
-                if text == "" { return Ok(vec![]); }
-                return Ok(vec![Token::PlainText(slice)]);
+                if text.is_empty() {
+                    return Ok(vec![]);
+                }
+                Ok(vec![Token::PlainText(slice)])
             }
-        };
+        }
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::ControlWord::Par;
-    use crate::{include_test_file, Parser};
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Rtf, Pard, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Pard, Rtf, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
+    use crate::ControlWord::Par;
 
     #[test]
     fn simple_tokenize_test() {
@@ -239,19 +242,22 @@ if (a == b) \{\
 \f0\b bold text. \ul Underline,bold text.\
  }"#;
         let tokens = Lexer::scan(text).unwrap();
-        assert_eq!(tokens, [
-            OpeningBracket,
-            ControlSymbol((Unknown("\\partightenfactor"), Value(0))),
-            ControlSymbol((FontSize, Value(24))),
-            ControlSymbol((Unknown("\\cf"), Value(0))),
-            PlainText("Font size 12,"),
-            ControlSymbol((FontNumber, Value(0))),
-            ControlSymbol((Bold, None)),
-            PlainText("bold text. "),
-            ControlSymbol((Unknown("\\ul"), None)),
-            PlainText("Underline,bold text."),
-            CRLF,
-            ClosingBracket
-        ]);
+        assert_eq!(
+            tokens,
+            [
+                OpeningBracket,
+                ControlSymbol((Unknown("\\partightenfactor"), Value(0))),
+                ControlSymbol((FontSize, Value(24))),
+                ControlSymbol((Unknown("\\cf"), Value(0))),
+                PlainText("Font size 12,"),
+                ControlSymbol((FontNumber, Value(0))),
+                ControlSymbol((Bold, None)),
+                PlainText("bold text. "),
+                ControlSymbol((Unknown("\\ul"), None)),
+                PlainText("Underline,bold text."),
+                CRLF,
+                ClosingBracket
+            ]
+        );
     }
 }
