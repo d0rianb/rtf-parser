@@ -1,13 +1,15 @@
 use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
 
-use std::fmt;
 use crate::{recursive_tokenize, recursive_tokenize_with_init};
+use std::fmt;
 
 pub enum LexerError {
     Error(String),
     InvalidLastChar,
 }
+
+impl std::error::Error for LexerError {}
 
 impl fmt::Display for LexerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -115,7 +117,9 @@ impl Lexer {
             // Else, it's plain text
             _ => {
                 let text = slice.trim();
-                if text == "" { return Ok(vec![]); }
+                if text == "" {
+                    return Ok(vec![]);
+                }
                 return Ok(vec![Token::PlainText(slice)]);
             }
         };
@@ -124,12 +128,12 @@ impl Lexer {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::ControlWord::Par;
-    use crate::{include_test_file, Parser};
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Rtf, Pard, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Pard, Rtf, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
+    use crate::ControlWord::Par;
+    use crate::{include_test_file, Parser};
 
     #[test]
     fn simple_tokenize_test() {
@@ -239,19 +243,22 @@ if (a == b) \{\
 \f0\b bold text. \ul Underline,bold text.\
  }"#;
         let tokens = Lexer::scan(text).unwrap();
-        assert_eq!(tokens, [
-            OpeningBracket,
-            ControlSymbol((Unknown("\\partightenfactor"), Value(0))),
-            ControlSymbol((FontSize, Value(24))),
-            ControlSymbol((Unknown("\\cf"), Value(0))),
-            PlainText("Font size 12,"),
-            ControlSymbol((FontNumber, Value(0))),
-            ControlSymbol((Bold, None)),
-            PlainText("bold text. "),
-            ControlSymbol((Unknown("\\ul"), None)),
-            PlainText("Underline,bold text."),
-            CRLF,
-            ClosingBracket
-        ]);
+        assert_eq!(
+            tokens,
+            [
+                OpeningBracket,
+                ControlSymbol((Unknown("\\partightenfactor"), Value(0))),
+                ControlSymbol((FontSize, Value(24))),
+                ControlSymbol((Unknown("\\cf"), Value(0))),
+                PlainText("Font size 12,"),
+                ControlSymbol((FontNumber, Value(0))),
+                ControlSymbol((Bold, None)),
+                PlainText("bold text. "),
+                ControlSymbol((Unknown("\\ul"), None)),
+                PlainText("Underline,bold text."),
+                CRLF,
+                ClosingBracket
+            ]
+        );
     }
 }
