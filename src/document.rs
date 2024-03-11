@@ -1,5 +1,5 @@
 use crate::header::RtfHeader;
-use crate::{Lexer, Parser, StyleBlock};
+use crate::StyleBlock;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct RtfDocument {
@@ -37,7 +37,7 @@ impl RtfDocument {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::{include_test_file, Lexer, Parser, RtfDocument};
+    use crate::{Lexer, Parser};
 
     #[test]
     fn test_get_text() {
