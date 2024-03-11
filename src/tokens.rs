@@ -17,11 +17,11 @@ pub enum Token<'a> {
 impl<'a> fmt::Debug for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Token::PlainText(text) => write!(f, r"PlainText : {:?}", text),
-            Token::OpeningBracket => write!(f, "OpeningBracket"),
-            Token::ClosingBracket => write!(f, "ClosingBracket"),
-            Token::CRLF => write!(f, "CRLF"),
-            Token::IgnorableDestination => write!(f, "IgnorableDestination"),
+            Token::PlainText(text) => write!(f, r"PlainText : {:?}", *text),
+            Token::OpeningBracket         => write!(f, "OpeningBracket"),
+            Token::ClosingBracket         => write!(f, "ClosingBracket"),
+            Token::CRLF                   => write!(f, "CRLF"),
+            Token::IgnorableDestination   => write!(f, "IgnorableDestination"),
             Token::ControlSymbol(symbol) => write!(f, "ControlSymbol : {:?}", symbol),
         }
     }
@@ -76,15 +76,33 @@ pub enum ControlWord<'a> {
     Bold,
     Underline,
 
-    Par,
-    Pard,
+    Par,                // New paragraph
+    Pard,               // Resets to default paragraph properties
     Sectd,
     Plain,
+    ParStyle,           // Designates paragraph style. If a paragraph style is specified, style properties must be specified with the paragraph. N references an entry in the stylesheet.
+    ParDefTab,          // Tab width
+    // Paragraph indent
+    FirstLineIdent,
+    LeftIndent,
+    RightIndent,
+    // Paragraph alignment
+    LeftAligned,
+    RightAligned,
+    Center,
+    Justify,
+    // Paragraph spacing
+    SpaceBefore,
+    SpaceAfter,
+    SpaceBetweenLine,   // 	If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line; if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used); if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
+    SpaceLineMul,       // Line spacing multiple. Indicates that the current line spacing is a multiple of "Single" line spacing. This control word can follow only the \sl control word and works in conjunction with it.
 
     Unknown(&'a str),
 }
 
 impl<'a> ControlWord<'a> {
+    // https://www.biblioscape.com/rtf15_spec.htm
+    // version 1.5 should be compatible with 1.9
     pub fn from(input: &str) -> Result<ControlSymbol, LexerError> {
         // Loop backward the string to get the number
         let mut it = input.chars().rev();
@@ -113,22 +131,42 @@ impl<'a> ControlWord<'a> {
         };
 
         let control_word = match prefix {
-            r"\rtf" => ControlWord::Rtf,
-            r"\ansi" => ControlWord::Ansi,
-            r"\fonttbl" => ControlWord::FontTable,
+            r"\rtf"       => ControlWord::Rtf,
+            r"\ansi"      => ControlWord::Ansi,
+            // Header
+            r"\fonttbl"   => ControlWord::FontTable,
             r"\colortabl" => ControlWord::ColorTable,
-            r"\filetbl" => ControlWord::FileTable,
-            r"\fcharset" => ControlWord::FontCharset,
-            r"\f" => ControlWord::FontNumber,
-            r"\fs" => ControlWord::FontSize,
-            r"\i" => ControlWord::Italic,
-            r"\b" => ControlWord::Bold,
-            r"\u" => ControlWord::Underline,
-            r"\par" => ControlWord::Par,
-            r"\pard" => ControlWord::Pard,
-            r"\sectd" => ControlWord::Sectd,
-            r"\plain" => ControlWord::Plain,
-            _ => ControlWord::Unknown(prefix),
+            r"\filetbl"   => ControlWord::FileTable,
+            // Font
+            r"\fcharset"  => ControlWord::FontCharset,
+            r"\f"         => ControlWord::FontNumber,
+            r"\fs"        => ControlWord::FontSize,
+            // Format
+            r"\i"         => ControlWord::Italic,
+            r"\b"         => ControlWord::Bold,
+            r"\u"         => ControlWord::Underline,
+            // Paragraph
+            r"\par"       => ControlWord::Par,
+            r"\pard"      => ControlWord::Pard,
+            r"\sectd"     => ControlWord::Sectd,
+            r"\s"         => ControlWord::ParStyle,
+            r"\pardeftab" => ControlWord::ParDefTab,
+            // Paragraph alignment
+            r"\ql"        => ControlWord::LeftAligned,
+            r"\qr"        => ControlWord::RightAligned,
+            r"\qj"        => ControlWord::Justify,
+            r"\qc"        => ControlWord::Center,
+            // Paragraph indent
+            r"\fi"        => ControlWord::FirstLineIdent,
+            r"\ri"        => ControlWord::RightIndent,
+            r"\li"        => ControlWord::LeftIndent,
+            // Paragraph Spacing
+            r"\sb"        => ControlWord::SpaceBefore,
+            r"\sa"        => ControlWord::SpaceAfter,
+            r"\sl"        => ControlWord::SpaceBetweenLine,
+            r"\slmul"     => ControlWord::SpaceLineMul,
+            // Unknown
+            _             => ControlWord::Unknown(prefix),
         };
         return Ok((control_word, property));
     }

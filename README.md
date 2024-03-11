@@ -1,5 +1,5 @@
 # rtf-parser
-A Rust RTF parser &amp; lexer library designed for speed and memory efficiency.
+A Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies.
 
 The library is split into 2 main components:
 1. The lexer
@@ -24,7 +24,7 @@ An `RtfDocument` is composed with :
 - the **body**, which is a `Vec<StyledBlock>`
 
 A `StyledBlock` contains all the information about the formatting of a specific block of text.  
-It contains a `Painter` and the text (`&str`).
+It contains a `Painter` and the text (`String`).
 The `Painter` is defined below, and the rendering implementation depends on the user. For now, it only supports font, bold, italic and underline.
 ```rust
 struct Painter {
@@ -36,7 +36,18 @@ struct Painter {
 }
 ```
 
-Tou can also extract the text without any formatting information, with the `to_text()` method of the `RtfDocument` struct.
+The layout information are exposed in the `paragraph` property :
+```rust
+pub struct Paragraph {
+    pub alignment: Alignment,
+    pub spacing: Spacing,
+    pub indent: Indentation,
+    pub tab_width: i32,
+}
+```
+It defined the way a blovk is aligned, what spacing it uses, etc...
+
+You also can extract the text without any formatting information, with the `to_text()` method of the `RtfDocument` struct.
 
 ```rust
 let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
@@ -69,14 +80,32 @@ assert_eq!(
     [
         StyleBlock {
             painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
+            paragraph: Paragraph { 
+                alignment: LeftAligned, 
+                spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
+                indent: Indentation { left: 0, right: 0, first_line: 0, },
+                tab_width: 0,
+            },            
             text: "Voici du texte en ",
         },
         StyleBlock {
             painter: Painter { font_ref: 0, font_size: 0, bold: true, italic: false, underline: false },
+            paragraph: Paragraph {
+                alignment: LeftAligned,
+                spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
+                indent: Indentation { left: 0, right: 0, first_line: 0, },
+                tab_width: 0,
+            },
             text: "gras",
         },
         StyleBlock {
             painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
+            paragraph: Paragraph {
+                alignment: LeftAligned,
+                spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
+                indent: Indentation { left: 0, right: 0, first_line: 0, },
+                tab_width: 0,
+            },
             text: ".",
         },
     ]

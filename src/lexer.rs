@@ -4,6 +4,7 @@ use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
 use crate::{recursive_tokenize, recursive_tokenize_with_init};
 
+#[derive(Clone)]
 pub enum LexerError {
     Error(String),
     InvalidLastChar,
@@ -127,10 +128,9 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Pard, Rtf, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Pard, Rtf,Italic, Par, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
-    use crate::ControlWord::Par;
 
     #[test]
     fn simple_tokenize_test() {
@@ -207,7 +207,11 @@ if (a == b) \{\
         let tokens = Lexer::scan(text);
         assert_eq!(
             tokens.unwrap(),
-            vec![OpeningBracket, IgnorableDestination, ControlSymbol((Unknown(r"\expandedcolortbl;"), None)), ClosingBracket,]
+            vec![
+                OpeningBracket,
+                IgnorableDestination,
+                ControlSymbol((Unknown(r"\expandedcolortbl;"), None)),
+                ClosingBracket,]
         )
     }
 
@@ -257,5 +261,24 @@ if (a == b) \{\
                 ClosingBracket
             ]
         );
+    }
+
+    #[test]
+    fn space_after_control_word() {
+        let text = r"{in{\i cred}ible}";
+        let tokens = Lexer::scan(text).unwrap();
+        assert_eq!(
+            tokens,
+            [
+                OpeningBracket,
+                PlainText("in"),
+                OpeningBracket,
+                ControlSymbol((Italic, None)),
+                PlainText("cred"),
+                ClosingBracket,
+                PlainText("ible"),
+                ClosingBracket,
+            ]
+        )
     }
 }

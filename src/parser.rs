@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::{fmt, mem};
+use crate::{Alignment, SpaceBetweenLine};
 
 use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
+use crate::paragraph::Paragraph;
 use crate::tokens::{ControlWord, Property, Token};
 
 // Use to specify control word in parse_header
@@ -18,6 +20,7 @@ macro_rules! header_control_word {
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct StyleBlock {
     pub painter: Painter,
+    pub paragraph: Paragraph,
     pub text: String,
 }
 
@@ -30,6 +33,7 @@ pub struct Painter {
     pub underline: bool,
 }
 
+#[derive(Clone)]
 pub enum ParserError {
     InvalidToken(String),
     IgnorableDestinationParsingError,
@@ -92,6 +96,7 @@ impl<'a> Parser<'a> {
         document.header = self.parse_header()?;
         // Parse Body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
+        let mut paragraph = Paragraph::default();
         let mut it = self.tokens.iter();
         while let Some(token) = it.next() {
             match token {
@@ -109,13 +114,25 @@ impl<'a> Parser<'a> {
                         return Err(ParserError::MalformedPainterStack);
                     };
                     match control_word {
-                        ControlWord::FontNumber => current_painter.font_ref = property.get_value() as FontRef,
-                        ControlWord::FontSize => current_painter.font_size = property.get_value() as u16,
-                        ControlWord::Bold => current_painter.bold = property.as_bool(),
-                        ControlWord::Italic => current_painter.italic = property.as_bool(),
-                        ControlWord::Underline => current_painter.underline = property.as_bool(),
+                        ControlWord::FontNumber         => current_painter.font_ref = property.get_value() as FontRef,
+                        ControlWord::FontSize           => current_painter.font_size = property.get_value() as u16,
+                        ControlWord::Bold               => current_painter.bold = property.as_bool(),
+                        ControlWord::Italic             => current_painter.italic = property.as_bool(),
+                        ControlWord::Underline          => current_painter.underline = property.as_bool(),
+                        // Paragraph
+                        ControlWord::Pard               => paragraph = Paragraph::default(), // Reset the par
+                        ControlWord::ParDefTab          => paragraph.tab_width = property.get_value(),
+                        ControlWord::LeftAligned
+                            | ControlWord::RightAligned
+                            | ControlWord::Center
+                            | ControlWord::Justify      => paragraph.alignment = Alignment::from(control_word),
+                        ControlWord::SpaceBefore        => paragraph.spacing.before = property.get_value(),
+                        ControlWord::SpaceAfter         => paragraph.spacing.after = property.get_value(),
+                        ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
+                        ControlWord::SpaceLineMul       => paragraph.spacing.line_multiplier = property.get_value(),
+                        // Others
                         _ => {}
-                    }
+                    };
                 }
                 Token::PlainText(text) => {
                     let Some(current_painter) = painter_stack.last() else {
@@ -124,7 +141,7 @@ impl<'a> Parser<'a> {
                     let last_style_group = document.body.last_mut();
                     // If the painter is the same as the previous one, merge the two block.
                     if let Some(group) = last_style_group {
-                        if group.painter.eq(current_painter) {
+                        if group.painter.eq(current_painter) && group.paragraph.eq(&paragraph) {
                             group.text.push_str(text);
                             continue;
                         }
@@ -132,20 +149,22 @@ impl<'a> Parser<'a> {
                     // Else, push another StyleBlock on the stack with its own painter
                     document.body.push(StyleBlock {
                         painter: current_painter.clone(),
+                        paragraph: paragraph.clone(),
                         text: String::from(*text),
                     });
                 }
                 Token::CRLF => {
-                    // heck for previous token to see if this is text of not
+                    // check for previous token to see if this is text of not
                     let text = "\n";
                     let last_style_group = document.body.last_mut();
-                    // If the painter is the same as the previous one, merge the two block.
+                    // If it's not the first group , add \n to the last one
                     if let Some(group) = last_style_group {
                         group.text.push_str(text);
                     } else {
                         // CRLF is pushed with default style
                         document.body.push(StyleBlock {
                             painter: Painter::default(),
+                            paragraph: paragraph.clone(),
                             text: String::from(text),
                         })
                     }
@@ -328,8 +347,9 @@ pub mod tests {
                         font_size: 0,
                         bold: false,
                         italic: false,
-                        underline: false
+                        underline: false,
                     },
+                    paragraph: Default::default(),
                     text: "Voici du texte en ".into(),
                 },
                 StyleBlock {
@@ -338,8 +358,9 @@ pub mod tests {
                         font_size: 0,
                         bold: true,
                         italic: false,
-                        underline: false
+                        underline: false,
                     },
+                    paragraph: Default::default(),
                     text: "gras".into(),
                 },
                 StyleBlock {
@@ -348,8 +369,9 @@ pub mod tests {
                         font_size: 0,
                         bold: false,
                         italic: false,
-                        underline: false
+                        underline: false,
                     },
+                    paragraph: Default::default(),
                     text: ".".into(),
                 },
             ]
@@ -431,6 +453,7 @@ pub mod tests {
                         italic: false,
                         underline: false,
                     },
+                    paragraph: Default::default(),
                     text: "\n".into(),
                 },
                 StyleBlock {
@@ -441,6 +464,7 @@ pub mod tests {
                         italic: false,
                         underline: false,
                     },
+                    paragraph: Default::default(),
                     text: "Empty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into(),
                 },
             ]
@@ -476,5 +500,24 @@ pub mod tests {
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(document.body[0].text, "Lorem ipsum\n\n");
         assert_eq!(document.body[1].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
+    }
+
+    #[test]
+    fn parse_paragraph_aligment() {
+        let rtf = r#"{\rtf1\ansi\deff0 {\fonttbl {\f0 Times;}}
+        \fs34
+        {\pard \qc \fs60 Annalium Romae\par}
+        {\pard \qj
+            Urbem Romam a principio reges habuere; libertatem et
+            \par}
+        {\pard \ql
+            Non Cinnae, non Sullae longa dominatio; et Pompei Crassique potentia
+            \par}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        dbg!(&document);
+        assert_eq!(document.body[0].paragraph.alignment, Alignment::Center);
+        assert_eq!(document.body[1].paragraph.alignment, Alignment::Justify);
+        assert_eq!(document.body[2].paragraph.alignment, Alignment::LeftAligned);
     }
 }
