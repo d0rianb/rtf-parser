@@ -25,14 +25,18 @@ An `RtfDocument` is composed with :
 
 A `StyledBlock` contains all the information about the formatting of a specific block of text.  
 It contains a `Painter` and the text (`String`).
-The `Painter` is defined below, and the rendering implementation depends on the user. For now, it only supports font, bold, italic and underline.
+The `Painter` is defined below, and the rendering implementation depends on the user.
 ```rust
-struct Painter {
-    font_ref: FontRef,
-    font_size: u16,
-    bold: bool,
-    italic: bool,
-    underline: bool,
+pub struct Painter {
+    pub font_ref: FontRef,
+    pub font_size: u16,
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
+    pub superscript: bool,
+    pub subscript: bool,
+    pub smallcaps: bool,
+    pub strike: bool,
 }
 ```
 

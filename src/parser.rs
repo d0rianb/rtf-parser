@@ -31,6 +31,10 @@ pub struct Painter {
     pub bold: bool,
     pub italic: bool,
     pub underline: bool,
+    pub superscript: bool,
+    pub subscript: bool,
+    pub smallcaps: bool,
+    pub strike: bool,
 }
 
 #[derive(Clone)]
@@ -119,6 +123,10 @@ impl<'a> Parser<'a> {
                         ControlWord::Bold               => current_painter.bold = property.as_bool(),
                         ControlWord::Italic             => current_painter.italic = property.as_bool(),
                         ControlWord::Underline          => current_painter.underline = property.as_bool(),
+                        ControlWord::Superscript        => current_painter.superscript = property.as_bool(),
+                        ControlWord::Subscript          => current_painter.subscript = property.as_bool(),
+                        ControlWord::Smallcaps          => current_painter.smallcaps = property.as_bool(),
+                        ControlWord::Strikethrough      => current_painter.strike = property.as_bool(),
                         // Paragraph
                         ControlWord::Pard               => paragraph = Paragraph::default(), // Reset the par
                         ControlWord::ParDefTab          => paragraph.tab_width = property.get_value(),

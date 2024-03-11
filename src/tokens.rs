@@ -67,7 +67,7 @@ pub enum ControlWord<'a> {
     FontTable,
     FontCharset,
     FontNumber,
-    FontSize,
+    FontSize,   // Expressed in half point
 
     ColorTable,
     FileTable,
@@ -75,6 +75,10 @@ pub enum ControlWord<'a> {
     Italic,
     Bold,
     Underline,
+    Superscript,  // 5th
+    Subscript,    // H20
+    Smallcaps,
+    Strikethrough,
 
     Par,                // New paragraph
     Pard,               // Resets to default paragraph properties
@@ -145,6 +149,11 @@ impl<'a> ControlWord<'a> {
             r"\i"         => ControlWord::Italic,
             r"\b"         => ControlWord::Bold,
             r"\u"         => ControlWord::Underline,
+            r"\ul"        => ControlWord::Underline,
+            r"\super"     => ControlWord::Superscript,
+            r"\sub"       => ControlWord::Subscript,
+            r"\scaps"     => ControlWord::Smallcaps,
+            r"\strike"    => ControlWord::Strikethrough,
             // Paragraph
             r"\par"       => ControlWord::Par,
             r"\pard"      => ControlWord::Pard,
