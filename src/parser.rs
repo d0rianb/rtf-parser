@@ -1,7 +1,7 @@
-use crate::document::RtfDocument;
 use std::collections::HashMap;
 use std::{fmt, mem};
 
+use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
 use crate::tokens::{ControlWord, Property, Token};
 
@@ -55,9 +55,7 @@ impl fmt::Display for ParserError {
 }
 
 impl fmt::Debug for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return write!(f, "{}", self);
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { return write!(f, "{}", self); }
 }
 
 pub struct Parser<'a> {
@@ -66,9 +64,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token<'a>>) -> Self {
-        Self { tokens, cursor: 0 }
-    }
+    pub fn new(tokens: Vec<Token<'a>>) -> Self { Self { tokens, cursor: 0 } }
 
     fn check_document_validity(&self) -> Result<(), ParserError> {
         // Check the document boundaries
@@ -162,14 +158,10 @@ impl<'a> Parser<'a> {
         return Ok(document);
     }
 
-    fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> {
-        return self.tokens.get(index);
-    }
+    fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> { return self.tokens.get(index); }
 
     // Get a view of the next token after cursor
-    fn get_next_token(&'a self) -> Option<&'a Token<'a>> {
-        return self.get_token_at(self.cursor);
-    }
+    fn get_next_token(&'a self) -> Option<&'a Token<'a>> { return self.get_token_at(self.cursor); }
 
     fn consume_token_at(&mut self, index: usize) -> Option<Token<'a>> {
         if self.tokens.is_empty() {
@@ -178,9 +170,7 @@ impl<'a> Parser<'a> {
         Some(self.tokens.remove(index))
     }
 
-    fn consume_next_token(&mut self) -> Option<Token<'a>> {
-        return self.consume_token_at(self.cursor);
-    }
+    fn consume_next_token(&mut self) -> Option<Token<'a>> { return self.consume_token_at(self.cursor); }
 
     // Consume token from cursor to <reference-token>
     fn _consume_tokens_until(&mut self, reference_token: Token<'a>) -> Vec<Token<'a>> {
@@ -305,7 +295,9 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::header::{CharacterSet::*, FontFamily::*, RtfHeader};
+    use crate::header::CharacterSet::*;
+    use crate::header::FontFamily::*;
+    use crate::header::RtfHeader;
     use crate::include_test_file;
     use crate::lexer::Lexer;
 

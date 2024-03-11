@@ -1,8 +1,8 @@
+use std::fmt;
+
 use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
-
 use crate::{recursive_tokenize, recursive_tokenize_with_init};
-use std::fmt;
 
 pub enum LexerError {
     Error(String),
@@ -23,9 +23,7 @@ impl fmt::Display for LexerError {
 }
 
 impl fmt::Debug for LexerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return write!(f, "{}", self);
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { return write!(f, "{}", self); }
 }
 
 pub struct Lexer;
@@ -133,7 +131,6 @@ pub(crate) mod tests {
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
     use crate::ControlWord::Par;
-    use crate::{include_test_file, Parser};
 
     #[test]
     fn simple_tokenize_test() {

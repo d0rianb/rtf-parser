@@ -1,5 +1,6 @@
-use crate::tokens::{ControlWord, Token};
 use std::collections::HashMap;
+
+use crate::tokens::{ControlWord, Token};
 
 pub type FontRef = u16;
 pub type FontTable = HashMap<FontRef, Font>;
