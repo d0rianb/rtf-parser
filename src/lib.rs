@@ -1,8 +1,7 @@
 // RTF parser for Text Editor
 // This library supports RTF version 1.9.1
-// specification is available here : https://dokumen.tips/documents/rtf-specification.html
-// Microsoft specification is : https://learn.microsoft.com/en-us/previous-versions/office/office-10/aa140283(v=office.10)
-// More explanations here : https://www.oreilly.com/library/view/rtf-pocket-guide/9781449302047/ch01.html
+// Specification is available here : https://dokumen.tips/documents/rtf-specification.html
+// Explanations on specification here : https://www.oreilly.com/library/view/rtf-pocket-guide/9781449302047/ch01.html
 
 #![allow(irrefutable_let_patterns)]
 

@@ -67,9 +67,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token<'a>>) -> Self {
-        Self { tokens, cursor: 0 }
-    }
+    pub fn new(tokens: Vec<Token<'a>>) -> Self { Self { tokens, cursor: 0 } }
 
     fn check_document_validity(&self) -> Result<(), ParserError> {
         // Check the document boundaries
@@ -232,13 +230,12 @@ impl<'a> Parser<'a> {
                     let font_table_tokens = self.consume_tokens_until_matching_bracket();
                     header.font_table = Self::parse_font_table(&font_table_tokens)?;
                     // After the font table, check if next token is plain text without consuming it. If so, break
-                    if let Some(&Token::PlainText(_text)) = self.get_next_token() { break; }
+                    if let Some(&Token::PlainText(_text)) = self.get_next_token() {
+                        break;
+                    }
                 }
                 // Break on par, pard, sectd, or plain - We no longer are in the header
-                (Some(header_control_word!(Pard)
-                      | header_control_word!(Sectd)
-                      | header_control_word!(Plain)
-                      | header_control_word!(Par)), _) => break,
+                (Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par)), _) => break,
                 // Break if it declares a font after the font table --> no more in the header
                 (Some(header_control_word!(FontNumber)), _) => {
                     if !header.font_table.is_empty() {
@@ -254,8 +251,10 @@ impl<'a> Parser<'a> {
                 // Check next without consuming token : break conditions
                 (_, Some(token)) => {
                     // Break on plain text not belonging to any table in the header
-                    if let Token::PlainText(_text) = token { break; }
-                },
+                    if let Token::PlainText(_text) = token {
+                        break;
+                    }
+                }
                 (None, None) => break,
                 (_, _) => {}
             }

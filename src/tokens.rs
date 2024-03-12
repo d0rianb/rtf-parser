@@ -17,16 +17,16 @@ pub enum Token<'a> {
 #[allow(dead_code)]
 impl<'a> fmt::Debug for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // #[rustfmt::skip]
-        match self {
-            Token::PlainText(text) => write!(f, r"PlainText : {:?}", *text),
-            Token::EscapedChar(ch) => write!(f, r"EscapedChar : {ch}"),
+        #[rustfmt::skip]
+        return match self {
+            Token::PlainText(text)        => write!(f, r"PlainText : {:?}", *text),
+            Token::EscapedChar(ch)        => write!(f, r"EscapedChar : {ch}"),
             Token::OpeningBracket         => write!(f, "OpeningBracket"),
             Token::ClosingBracket         => write!(f, "ClosingBracket"),
             Token::CRLF                   => write!(f, "CRLF"),
             Token::IgnorableDestination   => write!(f, "IgnorableDestination"),
             Token::ControlSymbol(symbol)  => write!(f, "ControlSymbol : {:?}", symbol),
-        }
+        };
     }
 }
 
