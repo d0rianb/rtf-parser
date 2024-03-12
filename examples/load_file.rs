@@ -1,5 +1,5 @@
 extern crate rtf_parser;
-use rtf_parser::{Lexer, Parser};
+use rtf_parser::{lexer::Lexer, parser::Parser};
 
 fn main() {
     let rtf_text = include_str!("../resources/tests/test-file.rtf");
