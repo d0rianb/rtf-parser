@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::{fmt, mem};
+use derivative::Derivative;
 
 use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
@@ -23,9 +24,11 @@ pub struct StyleBlock {
     pub text: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Derivative)]
+#[derivative(Default)]
 pub struct Painter {
     pub font_ref: FontRef,
+    #[derivative(Default(value="12"))]
     pub font_size: u16,
     pub bold: bool,
     pub italic: bool,
@@ -34,15 +37,6 @@ pub struct Painter {
     pub subscript: bool,
     pub smallcaps: bool,
     pub strike: bool,
-}
-
-impl Default for Painter {
-    fn default() -> Self {
-        Self {
-            font_size: 12,
-            ..Painter::default()
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -501,7 +495,6 @@ pub mod tests {
 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        dbg!(&document.body);
         assert_eq!(document.body[0].text, "Lorem ipsum");
         assert_eq!(document.body[1].text, "\n");
         assert_eq!(document.body[2].text, "\n");
