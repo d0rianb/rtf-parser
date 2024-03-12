@@ -304,10 +304,21 @@ impl<'a> Parser<'a> {
         return Ok(table);
     }
 
-    // Delete the ignore groups
+    // Traverse all the tokens and consume the ignore groups
     fn parse_ignore_groups(&mut self) {
         self.cursor = 0; // Reset the cursor
-        while let (Some(token), Some(next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
+        while let (Some(token), Some(mut next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
+            let mut i = 0;
+            // Manage the case where there is CRLF between { and ignore_group
+            // {\n /*/ignoregroup }
+            while next_token == &Token::CRLF {
+                if let Some(next_token_not_crlf) = self.get_token_at(self.cursor + 1 + i) {
+                    next_token = next_token_not_crlf;
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
             match (token, next_token) {
                 (Token::OpeningBracket, Token::IgnorableDestination) => {
                     self.consume_token_at(self.cursor); // Consume the opening bracket
@@ -419,8 +430,20 @@ pub mod tests {
     }
 
     #[test]
-    fn parse_ignore_group_test() {
+    fn parse_ignore_group() {
         let rtf = r"{\*\expandedcolortbl;;}";
+        let tokens = Lexer::scan(rtf).unwrap();
+        let mut parser = Parser::new(tokens);
+        let document = parser.parse().unwrap();
+        assert_eq!(parser.tokens, vec![]); // Should have consumed all the tokens
+        assert_eq!(document.header, RtfHeader::default());
+    }
+
+    #[test]
+    fn parse_ignore_group_with_crlf() {
+        let rtf = r"{\
+        \
+        \*\expandedcolortbl;;}";
         let tokens = Lexer::scan(rtf).unwrap();
         let mut parser = Parser::new(tokens);
         let document = parser.parse().unwrap();
