@@ -9,7 +9,7 @@ The lexer scan the document and return a `Vec<Token>` which represent the RTF fi
 To use it : 
 ```rust
 use rtf_parser::lexer::Lexer;
-use rtf_parser::token::Token;
+use rtf_parser::tokens::Token;
 
 let tokens: Vec<Token> = Lexer::scan("<rtf>")?;
 ```

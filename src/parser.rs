@@ -23,7 +23,7 @@ pub struct StyleBlock {
     pub text: String,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Painter {
     pub font_ref: FontRef,
     pub font_size: u16,
@@ -34,6 +34,15 @@ pub struct Painter {
     pub subscript: bool,
     pub smallcaps: bool,
     pub strike: bool,
+}
+
+impl Default for Painter {
+    fn default() -> Self {
+        Self {
+            font_size: 12,
+            ..Painter::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
