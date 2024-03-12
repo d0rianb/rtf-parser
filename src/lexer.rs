@@ -67,7 +67,6 @@ impl Lexer {
             previous_char = c;
         }
         // Manage last token (should always be "}")
-        // TODO: Handle the case where the last char is a line return
         if slice_start_index < current_index {
             let slice = &src[slice_start_index..current_index];
             if slice != "}" {
