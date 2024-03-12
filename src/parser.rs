@@ -67,7 +67,9 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token<'a>>) -> Self { Self { tokens, cursor: 0 } }
+    pub fn new(tokens: Vec<Token<'a>>) -> Self {
+        Self { tokens, cursor: 0 }
+    }
 
     fn check_document_validity(&self) -> Result<(), ParserError> {
         // Check the document boundaries
@@ -109,7 +111,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Token::ControlSymbol((control_word, property)) => {
-                    let Some(current_painter) = painter_stack.last_mut() else {
+                    let Some(mut current_painter) = painter_stack.last_mut() else {
                         return Err(ParserError::MalformedPainterStack);
                     };
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
@@ -125,6 +127,7 @@ impl<'a> Parser<'a> {
                         ControlWord::Strikethrough      => current_painter.strike = property.as_bool(),
                         // Paragraph
                         ControlWord::Pard               => paragraph = Paragraph::default(), // Reset the par
+                        ControlWord::Plain              => current_painter = &mut Painter::default(), // Reset the painter
                         ControlWord::ParDefTab          => paragraph.tab_width = property.get_value(),
                         ControlWord::LeftAligned
                             | ControlWord::RightAligned
@@ -228,20 +231,31 @@ impl<'a> Parser<'a> {
                 (Some(Token::OpeningBracket), Some(&header_control_word!(FontTable, None))) => {
                     let font_table_tokens = self.consume_tokens_until_matching_bracket();
                     header.font_table = Self::parse_font_table(&font_table_tokens)?;
+                    // After the font table, check if next token is plain text without consuming it. If so, break
+                    if let Some(&Token::PlainText(_text)) = self.get_next_token() { break; }
                 }
                 // Break on par, pard, sectd, or plain - We no longer are in the header
-                (Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par)), _) => break,
+                (Some(header_control_word!(Pard)
+                      | header_control_word!(Sectd)
+                      | header_control_word!(Plain)
+                      | header_control_word!(Par)), _) => break,
                 // Break if it declares a font after the font table --> no more in the header
                 (Some(header_control_word!(FontNumber)), _) => {
                     if !header.font_table.is_empty() {
                         break;
                     }
                 }
+                // Check and consume token
                 (Some(ref token), _) => {
                     if let Some(charset) = CharacterSet::from(token) {
                         header.character_set = charset;
                     }
                 }
+                // Check next without consuming token : break conditions
+                (_, Some(token)) => {
+                    // Break on plain text not belonging to any table in the header
+                    if let Token::PlainText(_text) = token { break; }
+                },
                 (None, None) => break,
                 (_, _) => {}
             }
@@ -483,9 +497,9 @@ pub mod tests {
 
     #[test]
     fn should_parse_escaped_char() {
-        let rtf = r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Times;}} je suis une b\'eate}";
+        let rtf = r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Times;}}je suis une b\'eate}";
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        dbg!(&document);
+        assert_eq!(document.body[0].text, "je suis une bête");
     }
 }

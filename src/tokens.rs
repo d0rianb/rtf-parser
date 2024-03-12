@@ -17,10 +17,10 @@ pub enum Token<'a> {
 #[allow(dead_code)]
 impl<'a> fmt::Debug for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        #[rustfmt::skip]
+        // #[rustfmt::skip]
         match self {
-            Token::PlainText(text)        => write!(f, r"PlainText : {:?}", *text),
-            Token::EscapedChar(ch)        => write!(f, r"EscapedChar : {ch}"),
+            Token::PlainText(text) => write!(f, r"PlainText : {:?}", *text),
+            Token::EscapedChar(ch) => write!(f, r"EscapedChar : {ch}"),
             Token::OpeningBracket         => write!(f, "OpeningBracket"),
             Token::ClosingBracket         => write!(f, "ClosingBracket"),
             Token::CRLF                   => write!(f, "CRLF"),
@@ -162,6 +162,7 @@ impl<'a> ControlWord<'a> {
             r"\par"       => ControlWord::Par,
             r"\pard"      => ControlWord::Pard,
             r"\sectd"     => ControlWord::Sectd,
+            r"\plain"     => ControlWord::Plain,
             r"\s"         => ControlWord::ParStyle,
             r"\pardeftab" => ControlWord::ParDefTab,
             // Paragraph alignment
