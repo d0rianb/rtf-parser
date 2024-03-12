@@ -109,7 +109,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Token::ControlSymbol((control_word, property)) => {
-                    let Some(mut current_painter) = painter_stack.last_mut() else {
+                    let Some(current_painter) = painter_stack.last_mut() else {
                         return Err(ParserError::MalformedPainterStack);
                     };
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
                         ControlWord::Strikethrough      => current_painter.strike = property.as_bool(),
                         // Paragraph
                         ControlWord::Pard               => paragraph = Paragraph::default(), // Reset the par
-                        ControlWord::Plain              => current_painter = &mut Painter::default(), // Reset the painter
+                        ControlWord::Plain              => *current_painter = Painter::default(), // Reset the painter
                         ControlWord::ParDefTab          => paragraph.tab_width = property.get_value(),
                         ControlWord::LeftAligned
                             | ControlWord::RightAligned
@@ -256,7 +256,6 @@ impl<'a> Parser<'a> {
                     }
                 }
                 (None, None) => break,
-                (_, _) => {}
             }
         }
         return Ok(header);
@@ -394,7 +393,7 @@ pub mod tests {
             Finally, back to the default color.\line
             }";
         let tokens = Lexer::scan(document).unwrap();
-        let doc = Parser::new(tokens).parse().unwrap();
+        let _doc = Parser::new(tokens).parse().unwrap();
     }
 
     #[test]
@@ -488,11 +487,12 @@ pub mod tests {
 \f1\b0\fs21 \cf0 \
 \pard\pardeftab709\fi-432\ri-1\sb240\sa120\partightenfactor0
 \ls1\ilvl0
-\f0\b\fs36 \cf2 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \
+\f0\b\fs36\u\cf2\plain Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \
 \pard\pardeftab709\sl288\slmult1\sa225\qj\partightenfactor0
 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
+        dbg!(&document.body);
         assert_eq!(document.body[0].text, "Lorem ipsum");
         assert_eq!(document.body[1].text, "\n");
         assert_eq!(document.body[2].text, "\n");
@@ -523,5 +523,13 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(document.body[0].text, "je suis une bête");
+    }
+
+    #[test]
+    fn parse_plain_directive() {
+        let rtf = r"{\rtf1{\fonttbl {\f0 Times;}}\f0\b\fs36\u\cf2\plain Plain text}";
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(document.body[0].painter, Painter::default());
     }
 }

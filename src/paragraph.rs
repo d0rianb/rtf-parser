@@ -1,6 +1,6 @@
 // Define the paragraph related structs and enums
 
-use crate::ControlWord;
+use crate::tokens::ControlWord;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Paragraph {
@@ -10,7 +10,7 @@ pub struct Paragraph {
     pub tab_width: i32,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum Alignment {
     #[default]
     LeftAligned,

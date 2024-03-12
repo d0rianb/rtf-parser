@@ -15,8 +15,8 @@ let tokens: Vec<Token> = Lexer::scan("<rtf>")?;
 
 These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.
 ```rust
-let parser = Parser::new(tokens)?;
-let doc: RtfDocument = parser.parse()?;
+    let parser = Parser::new(tokens);
+    let doc: RtfDocument = parser.parse()?;
 ```
 
 An `RtfDocument` is composed with : 
@@ -54,65 +54,70 @@ It defined the way a blovk is aligned, what spacing it uses, etc...
 You also can extract the text without any formatting information, with the `to_text()` method of the `RtfDocument` struct.
 
 ```rust
-let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
-let tokens = Lexer::scan(rtf)?;
-let document = Parser::new(tokens)?;
-let text = document.to_text();
-assert_eq!(text, "Voici du texte en gras.");
+fn main() -> Result<(), Box<dyn Error>> {
+    let rtf = r#"{\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par}"#;
+    let tokens = Lexer::scan(rtf)?;
+    let document = Parser::new(tokens)?;
+    let text = document.to_text();
+    assert_eq!(text, "Voici du texte en gras.");
+}
 ```
 
 ## Examples 
 A complete example of rtf parsing is presented below : 
 ```rust
-use rtf_parser::{Lexer, Parser};
+use rtf_parser::lexer::Lexer;
+use rtf_parser::parser::Parser;
 
-let rtf_text = r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#;
-let tokens = Lexer::scan(rtf_text)?;
-let doc = Parser::new(tokens).parse()?;
-
-assert_eq!(
-    doc.header,
-    RtfHeader {
-        character_set: Ansi,
-        font_table: FontTable::from([
-            (0, Font { name: "Helvetica", character_set: 0, font_family: Swiss })
-        ])
-    }
-);
-assert_eq!(
-    doc.body,
-    [
-        StyleBlock {
-            painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
-            paragraph: Paragraph { 
-                alignment: LeftAligned, 
-                spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
-                indent: Indentation { left: 0, right: 0, first_line: 0, },
-                tab_width: 0,
-            },            
-            text: "Voici du texte en ",
-        },
-        StyleBlock {
-            painter: Painter { font_ref: 0, font_size: 0, bold: true, italic: false, underline: false },
-            paragraph: Paragraph {
-                alignment: LeftAligned,
-                spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
-                indent: Indentation { left: 0, right: 0, first_line: 0, },
-                tab_width: 0,
+fn main() -> Result<(), Box<dyn Error>> {
+    let rtf_text = r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#;
+    let tokens = Lexer::scan(rtf_text)?;
+    let doc = Parser::new(tokens).parse()?;
+    assert_eq!(
+        doc.header,
+        RtfHeader {
+            character_set: Ansi,
+            font_table: FontTable::from([
+                (0, Font { name: "Helvetica", character_set: 0, font_family: Swiss })
+            ])
+        }
+    );
+    assert_eq!(
+        doc.body,
+        [
+            StyleBlock {
+                painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
+                paragraph: Paragraph {
+                    alignment: LeftAligned,
+                    spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
+                    indent: Indentation { left: 0, right: 0, first_line: 0, },
+                    tab_width: 0,
+                },
+                text: "Voici du texte en ",
             },
-            text: "gras",
-        },
-        StyleBlock {
-            painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
-            paragraph: Paragraph {
-                alignment: LeftAligned,
-                spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
-                indent: Indentation { left: 0, right: 0, first_line: 0, },
-                tab_width: 0,
+            StyleBlock {
+                painter: Painter { font_ref: 0, font_size: 0, bold: true, italic: false, underline: false },
+                paragraph: Paragraph {
+                    alignment: LeftAligned,
+                    spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
+                    indent: Indentation { left: 0, right: 0, first_line: 0, },
+                    tab_width: 0,
+                },
+                text: "gras",
             },
-            text: ".",
-        },
-    ]
-);
+            StyleBlock {
+                painter: Painter { font_ref: 0, font_size: 0, bold: false, italic: false, underline: false },
+                paragraph: Paragraph {
+                    alignment: LeftAligned,
+                    spacing: Spacing { before: 0, after: 0, between_line: Auto, line_multiplier: 0, },
+                    indent: Indentation { left: 0, right: 0, first_line: 0, },
+                    tab_width: 0,
+                },
+                text: ".",
+            },
+        ]
+    );
+    return Ok(());
+}
 ```
 

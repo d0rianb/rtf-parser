@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::LexerError;
+use crate::lexer::LexerError;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Clone)]
