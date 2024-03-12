@@ -13,8 +13,6 @@ exclude = ["*.rtf", ".idea"]
 lto = true
 opt-level = 3
 
-[dev-dependencies]
-derivative = "2.2.0"
-
 [dependencies]
+derivative = "2.2.0"
 

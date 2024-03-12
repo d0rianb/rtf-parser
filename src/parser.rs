@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::{fmt, mem};
+
 use derivative::Derivative;
 
 use crate::document::RtfDocument;
@@ -24,11 +25,11 @@ pub struct StyleBlock {
     pub text: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Derivative)]
+#[derive(Derivative, Debug, Clone, PartialEq)]
 #[derivative(Default)]
 pub struct Painter {
     pub font_ref: FontRef,
-    #[derivative(Default(value="12"))]
+    #[derivative(Default(value = "12"))]
     pub font_size: u16,
     pub bold: bool,
     pub italic: bool,
