@@ -16,7 +16,7 @@ pub enum Alignment {
     LeftAligned,
     RightAligned,
     Center,
-    Justify
+    Justify,
 }
 
 impl From<&ControlWord<'_>> for Alignment {
@@ -36,7 +36,7 @@ pub struct Spacing {
     pub before: i32,
     pub after: i32,
     pub between_line: SpaceBetweenLine,
-    pub line_multiplier: i32
+    pub line_multiplier: i32,
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -44,7 +44,7 @@ pub enum SpaceBetweenLine {
     Value(i32),
     #[default]
     Auto,
-    Invalid
+    Invalid,
 }
 
 //Space between lines. If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line; if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used); if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
@@ -53,8 +53,8 @@ impl From<i32> for SpaceBetweenLine {
         return match value {
             1000 => SpaceBetweenLine::Auto,
             val if val < 0 => SpaceBetweenLine::Value(val.abs()),
-            val => SpaceBetweenLine::Value(val)
-        }
+            val => SpaceBetweenLine::Value(val),
+        };
     }
 }
 
@@ -65,4 +65,3 @@ pub struct Indentation {
     pub right: i32,
     pub first_line: i32,
 }
-

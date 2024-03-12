@@ -4,9 +4,10 @@ use crate::tokens::{ControlWord, Token};
 use crate::utils::StrUtils;
 use crate::{recursive_tokenize, recursive_tokenize_with_init};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum LexerError {
     Error(String),
+    InvalidUnicode(String),
     InvalidLastChar,
 }
 
@@ -17,14 +18,18 @@ impl fmt::Display for LexerError {
         let _ = write!(f, "[RTF Lexer] : ");
         let _ = match self {
             LexerError::InvalidLastChar => write!(f, "Invalid last char, should be '}}'"),
+            LexerError::InvalidUnicode(uc) => write!(f, "Invalid unicode : {uc}"),
             LexerError::Error(msg) => write!(f, "{}", msg),
         };
         return Ok(());
     }
 }
 
-impl fmt::Debug for LexerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { return write!(f, "{}", self); }
+impl From<std::str::Utf8Error> for LexerError {
+    fn from(value: std::str::Utf8Error) -> Self { return LexerError::Error(value.to_string()); }
+}
+impl From<std::num::ParseIntError> for LexerError {
+    fn from(value: std::num::ParseIntError) -> Self { return LexerError::Error(value.to_string()); }
 }
 
 pub struct Lexer;
@@ -84,6 +89,18 @@ impl Lexer {
                     let tail = slice.get(1..).unwrap_or("");
                     return Ok(vec![Token::PlainText(tail)]); // No recursive tokenize here, juste some plain text because the char is escaped
                 }
+                '\'' => {
+                    // Escaped unicode : \'f0
+                    let tail = slice.get(1..).unwrap_or("");
+                    if tail.len() < 2 {
+                        return Err(LexerError::InvalidUnicode(tail.into()));
+                    }
+                    let byte = u8::from_str_radix(&tail[1..3], 16)?; // f0
+                    let ch = char::from(byte); // from 0xf0
+                    let mut ret = vec![Token::EscapedChar(ch)];
+                    recursive_tokenize!(&tail[3..], ret);
+                    return Ok(ret);
+                }
                 '\n' => {
                     // CRLF
                     let mut ret = vec![Token::CRLF];
@@ -128,7 +145,7 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Pard, Rtf,Italic, Par, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 
@@ -207,11 +224,7 @@ if (a == b) \{\
         let tokens = Lexer::scan(text);
         assert_eq!(
             tokens.unwrap(),
-            vec![
-                OpeningBracket,
-                IgnorableDestination,
-                ControlSymbol((Unknown(r"\expandedcolortbl;"), None)),
-                ClosingBracket,]
+            vec![OpeningBracket, IgnorableDestination, ControlSymbol((Unknown(r"\expandedcolortbl;"), None)), ClosingBracket,]
         )
     }
 
@@ -255,7 +268,7 @@ if (a == b) \{\
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((Bold, None)),
                 PlainText("bold text. "),
-                ControlSymbol((Unknown("\\ul"), None)),
+                ControlSymbol((Underline, None)),
                 PlainText("Underline,bold text."),
                 CRLF,
                 ClosingBracket
@@ -269,16 +282,14 @@ if (a == b) \{\
         let tokens = Lexer::scan(text).unwrap();
         assert_eq!(
             tokens,
-            [
-                OpeningBracket,
-                PlainText("in"),
-                OpeningBracket,
-                ControlSymbol((Italic, None)),
-                PlainText("cred"),
-                ClosingBracket,
-                PlainText("ible"),
-                ClosingBracket,
-            ]
+            [OpeningBracket, PlainText("in"), OpeningBracket, ControlSymbol((Italic, None)), PlainText("cred"), ClosingBracket, PlainText("ible"), ClosingBracket,]
         )
+    }
+
+    #[test]
+    fn should_handle_escaped_char() {
+        let rtf = r"{je suis une b\'eate}";
+        let tokens = Lexer::scan(rtf).unwrap();
+        assert_eq!(tokens, [OpeningBracket, PlainText("je suis une b"), EscapedChar('ê'), PlainText("te"), ClosingBracket,]);
     }
 }

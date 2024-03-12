@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::{fmt, mem};
-use crate::{Alignment, SpaceBetweenLine};
 
 use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
-use crate::paragraph::Paragraph;
+use crate::paragraph::{Alignment, Paragraph, SpaceBetweenLine};
 use crate::tokens::{ControlWord, Property, Token};
 
 // Use to specify control word in parse_header
@@ -37,7 +36,7 @@ pub struct Painter {
     pub strike: bool,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum ParserError {
     InvalidToken(String),
     IgnorableDestinationParsingError,
@@ -60,10 +59,6 @@ impl fmt::Display for ParserError {
         };
         return Ok(());
     }
-}
-
-impl fmt::Debug for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { return write!(f, "{}", self); }
 }
 
 pub struct Parser<'a> {
@@ -117,6 +112,7 @@ impl<'a> Parser<'a> {
                     let Some(current_painter) = painter_stack.last_mut() else {
                         return Err(ParserError::MalformedPainterStack);
                     };
+                    #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
                         ControlWord::FontNumber         => current_painter.font_ref = property.get_value() as FontRef,
                         ControlWord::FontSize           => current_painter.font_size = property.get_value() as u16,
@@ -142,47 +138,39 @@ impl<'a> Parser<'a> {
                         _ => {}
                     };
                 }
-                Token::PlainText(text) => {
-                    let Some(current_painter) = painter_stack.last() else {
-                        return Err(ParserError::MalformedPainterStack);
-                    };
-                    let last_style_group = document.body.last_mut();
-                    // If the painter is the same as the previous one, merge the two block.
-                    if let Some(group) = last_style_group {
-                        if group.painter.eq(current_painter) && group.paragraph.eq(&paragraph) {
-                            group.text.push_str(text);
-                            continue;
-                        }
-                    }
-                    // Else, push another StyleBlock on the stack with its own painter
-                    document.body.push(StyleBlock {
-                        painter: current_painter.clone(),
-                        paragraph: paragraph.clone(),
-                        text: String::from(*text),
-                    });
+                Token::EscapedChar(ch) => {
+                    let mut tmp = [0u8; 4];
+                    Self::add_text_to_document(ch.encode_utf8(&mut tmp), &painter_stack, &paragraph, &mut document)?
                 }
-                Token::CRLF => {
-                    // check for previous token to see if this is text of not
-                    let text = "\n";
-                    let last_style_group = document.body.last_mut();
-                    // If it's not the first group , add \n to the last one
-                    if let Some(group) = last_style_group {
-                        group.text.push_str(text);
-                    } else {
-                        // CRLF is pushed with default style
-                        document.body.push(StyleBlock {
-                            painter: Painter::default(),
-                            paragraph: paragraph.clone(),
-                            text: String::from(text),
-                        })
-                    }
-                }
+                Token::PlainText(text) => Self::add_text_to_document(*text, &painter_stack, &paragraph, &mut document)?,
+                Token::CRLF => Self::add_text_to_document("\n", &painter_stack, &paragraph, &mut document)?,
                 Token::IgnorableDestination => {
                     return Err(ParserError::IgnorableDestinationParsingError);
                 }
-            }
+            };
         }
         return Ok(document);
+    }
+
+    fn add_text_to_document(text: &str, painter_stack: &Vec<Painter>, paragraph: &Paragraph, document: &mut RtfDocument) -> Result<(), ParserError> {
+        let Some(current_painter) = painter_stack.last() else {
+            return Err(ParserError::MalformedPainterStack);
+        };
+        let last_style_group = document.body.last_mut();
+        // If the painter is the same as the previous one, merge the two block.
+        if let Some(group) = last_style_group {
+            if group.painter.eq(current_painter) && group.paragraph.eq(&paragraph) {
+                group.text.push_str(text);
+                return Ok(());
+            }
+        }
+        // Else, push another StyleBlock on the stack with its own painter
+        document.body.push(StyleBlock {
+            painter: current_painter.clone(),
+            paragraph: paragraph.clone(),
+            text: String::from(text),
+        });
+        return Ok(());
     }
 
     fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> { return self.tokens.get(index); }
@@ -350,35 +338,17 @@ pub mod tests {
             doc.body,
             [
                 StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 0,
-                        bold: false,
-                        italic: false,
-                        underline: false,
-                    },
+                    painter: Painter::default(),
                     paragraph: Default::default(),
                     text: "Voici du texte en ".into(),
                 },
                 StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 0,
-                        bold: true,
-                        italic: false,
-                        underline: false,
-                    },
+                    painter: Painter { bold: true, ..Painter::default() },
                     paragraph: Default::default(),
                     text: "gras".into(),
                 },
                 StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 0,
-                        bold: false,
-                        italic: false,
-                        underline: false,
-                    },
+                    painter: Painter::default(),
                     paragraph: Default::default(),
                     text: ".".into(),
                 },
@@ -452,30 +422,11 @@ pub mod tests {
         let document = parser.parse().unwrap();
         assert_eq!(
             document.body,
-            vec![
-                StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 0,
-                        bold: false,
-                        italic: false,
-                        underline: false,
-                    },
-                    paragraph: Default::default(),
-                    text: "\n".into(),
-                },
-                StyleBlock {
-                    painter: Painter {
-                        font_ref: 0,
-                        font_size: 24,
-                        bold: false,
-                        italic: false,
-                        underline: false,
-                    },
-                    paragraph: Default::default(),
-                    text: "Empty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into(),
-                },
-            ]
+            vec![StyleBlock {
+                painter: Painter { font_size: 24, ..Painter::default() },
+                paragraph: Default::default(),
+                text: "\nEmpty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into(),
+            },]
         );
     }
 
@@ -506,8 +457,10 @@ pub mod tests {
 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(document.body[0].text, "Lorem ipsum\n\n");
-        assert_eq!(document.body[1].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
+        assert_eq!(document.body[0].text, "Lorem ipsum");
+        assert_eq!(document.body[1].text, "\n");
+        assert_eq!(document.body[2].text, "\n");
+        assert_eq!(document.body[3].text, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \n");
     }
 
     #[test]
@@ -523,9 +476,16 @@ pub mod tests {
             \par}"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        dbg!(&document);
         assert_eq!(document.body[0].paragraph.alignment, Alignment::Center);
         assert_eq!(document.body[1].paragraph.alignment, Alignment::Justify);
         assert_eq!(document.body[2].paragraph.alignment, Alignment::LeftAligned);
+    }
+
+    #[test]
+    fn should_parse_escaped_char() {
+        let rtf = r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Times;}} je suis une b\'eate}";
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        dbg!(&document);
     }
 }

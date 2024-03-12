@@ -6,6 +6,7 @@ use crate::LexerError;
 #[derive(PartialEq, Eq, Clone)]
 pub enum Token<'a> {
     PlainText(&'a str),
+    EscapedChar(char),
     OpeningBracket,
     ClosingBracket,
     CRLF,                 // Line-return \n
@@ -16,13 +17,15 @@ pub enum Token<'a> {
 #[allow(dead_code)]
 impl<'a> fmt::Debug for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        #[rustfmt::skip]
         match self {
-            Token::PlainText(text) => write!(f, r"PlainText : {:?}", *text),
+            Token::PlainText(text)        => write!(f, r"PlainText : {:?}", *text),
+            Token::EscapedChar(ch)        => write!(f, r"EscapedChar : {ch}"),
             Token::OpeningBracket         => write!(f, "OpeningBracket"),
             Token::ClosingBracket         => write!(f, "ClosingBracket"),
             Token::CRLF                   => write!(f, "CRLF"),
             Token::IgnorableDestination   => write!(f, "IgnorableDestination"),
-            Token::ControlSymbol(symbol) => write!(f, "ControlSymbol : {:?}", symbol),
+            Token::ControlSymbol(symbol)  => write!(f, "ControlSymbol : {:?}", symbol),
         }
     }
 }
@@ -67,7 +70,7 @@ pub enum ControlWord<'a> {
     FontTable,
     FontCharset,
     FontNumber,
-    FontSize,   // Expressed in half point
+    FontSize, // Expressed in half point
 
     ColorTable,
     FileTable,
@@ -75,17 +78,17 @@ pub enum ControlWord<'a> {
     Italic,
     Bold,
     Underline,
-    Superscript,  // 5th
-    Subscript,    // H20
+    Superscript, // 5th
+    Subscript,   // H20
     Smallcaps,
     Strikethrough,
 
-    Par,                // New paragraph
-    Pard,               // Resets to default paragraph properties
+    Par,  // New paragraph
+    Pard, // Resets to default paragraph properties
     Sectd,
     Plain,
-    ParStyle,           // Designates paragraph style. If a paragraph style is specified, style properties must be specified with the paragraph. N references an entry in the stylesheet.
-    ParDefTab,          // Tab width
+    ParStyle,  // Designates paragraph style. If a paragraph style is specified, style properties must be specified with the paragraph. N references an entry in the stylesheet.
+    ParDefTab, // Tab width
     // Paragraph indent
     FirstLineIdent,
     LeftIndent,
@@ -98,8 +101,8 @@ pub enum ControlWord<'a> {
     // Paragraph spacing
     SpaceBefore,
     SpaceAfter,
-    SpaceBetweenLine,   // 	If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line; if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used); if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
-    SpaceLineMul,       // Line spacing multiple. Indicates that the current line spacing is a multiple of "Single" line spacing. This control word can follow only the \sl control word and works in conjunction with it.
+    SpaceBetweenLine, // 	If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line; if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used); if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
+    SpaceLineMul, // Line spacing multiple. Indicates that the current line spacing is a multiple of "Single" line spacing. This control word can follow only the \sl control word and works in conjunction with it.
 
     Unknown(&'a str),
 }
@@ -134,13 +137,14 @@ impl<'a> ControlWord<'a> {
             Property::Value(value)
         };
 
-        let control_word = match prefix {
+        #[rustfmt::skip]
+            let control_word = match prefix {
             r"\rtf"       => ControlWord::Rtf,
             r"\ansi"      => ControlWord::Ansi,
             // Header
             r"\fonttbl"   => ControlWord::FontTable,
             r"\colortabl" => ControlWord::ColorTable,
-            r"\filetbl"   => ControlWord::FileTable,
+            r"\filetbl"    => ControlWord::FileTable,
             // Font
             r"\fcharset"  => ControlWord::FontCharset,
             r"\f"         => ControlWord::FontNumber,
@@ -166,7 +170,7 @@ impl<'a> ControlWord<'a> {
             r"\qj"        => ControlWord::Justify,
             r"\qc"        => ControlWord::Center,
             // Paragraph indent
-            r"\fi"        => ControlWord::FirstLineIdent,
+            r"\fi"         => ControlWord::FirstLineIdent,
             r"\ri"        => ControlWord::RightIndent,
             r"\li"        => ControlWord::LeftIndent,
             // Paragraph Spacing

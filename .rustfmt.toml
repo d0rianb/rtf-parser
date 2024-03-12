@@ -9,3 +9,6 @@ fn_single_line = true
 reorder_imports = true
 imports_granularity = "Module"
 group_imports = "StdExternalCrate"
+
+match_arm_leading_pipes = "preserve"
+

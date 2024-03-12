@@ -30,6 +30,7 @@ impl StrUtils for str {
     }
 }
 
+// Macros
 // Specify the path to the test files
 #[macro_export]
 macro_rules! include_test_file {
