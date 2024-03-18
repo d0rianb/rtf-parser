@@ -4,7 +4,7 @@ use std::{fmt, mem};
 use derivative::Derivative;
 
 use crate::document::RtfDocument;
-use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader};
+use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
 use crate::paragraph::{Alignment, Paragraph, SpaceBetweenLine};
 use crate::tokens::{ControlWord, Property, Token};
 
@@ -57,7 +57,7 @@ impl fmt::Display for ParserError {
         let _ = match self {
             ParserError::InvalidToken(msg) => write!(f, "{}", msg),
             ParserError::IgnorableDestinationParsingError => write!(f, "No ignorable destination should be left"),
-            ParserError::MalformedPainterStack => write!(f, "Malformed painter stack"),
+            ParserError::MalformedPainterStack => write!(f, "Malformed painter stack : Unbalanced number of brackets"),
             ParserError::InvalidFontIdentifier(property) => write!(f, "Invalid font identifier : {:?}", property),
             ParserError::NoMoreToken => write!(f, "No more token to parse"),
         };
@@ -238,6 +238,14 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
+                (Some(Token::OpeningBracket), Some(&header_control_word!(StyleSheet, None))) => {
+                    let stylesheet_tokens = self.consume_tokens_until_matching_bracket();
+                    header.stylesheet = Self::parse_stylesheet(&stylesheet_tokens)?;
+                    // After the stylesheet, check if next token is plain text without consuming it. If so, break
+                    if let Some(&Token::PlainText(_text)) = self.get_next_token() {
+                        break;
+                    }
+                }
                 // Break on par, pard, sectd, or plain - We no longer are in the header
                 (Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par)), _) => break,
                 // Break if it declares a font after the font table --> no more in the header
@@ -306,6 +314,11 @@ impl<'a> Parser<'a> {
         return Ok(table);
     }
 
+    fn parse_stylesheet(stylesheet_tokens: &Vec<Token<'a>>) -> Result<StyleSheet, ParserError> {
+        // TODO
+        return Ok(StyleSheet {});
+    }
+
     // Traverse all the tokens and consume the ignore groups
     fn parse_ignore_groups(&mut self) {
         self.cursor = 0; // Reset the cursor
@@ -313,7 +326,7 @@ impl<'a> Parser<'a> {
             let mut i = 0;
             // Manage the case where there is CRLF between { and ignore_group
             // {\n /*/ignoregroup }
-            while next_token == &Token::CRLF {
+            while *next_token == Token::CRLF {
                 if let Some(next_token_not_crlf) = self.get_token_at(self.cursor + 1 + i) {
                     next_token = next_token_not_crlf;
                     i += 1;
@@ -344,7 +357,7 @@ pub mod tests {
     use crate::lexer::Lexer;
 
     #[test]
-    fn parser_simple_test() {
+    fn parser_header() {
         let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#).unwrap();
         let doc = Parser::new(tokens).parse().unwrap();
         assert_eq!(
@@ -358,7 +371,8 @@ pub mod tests {
                         character_set: 0,
                         font_family: Swiss
                     }
-                )])
+                )]),
+                ..RtfHeader::default()
             }
         );
         assert_eq!(
@@ -427,6 +441,7 @@ pub mod tests {
                         }
                     )
                 ]),
+                ..RtfHeader::default()
             }
         );
     }

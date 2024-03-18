@@ -9,6 +9,7 @@ pub type FontTable = HashMap<FontRef, Font>;
 pub struct RtfHeader {
     pub character_set: CharacterSet,
     pub font_table: FontTable,
+    pub stylesheet: StyleSheet,
 }
 
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
@@ -64,3 +65,6 @@ impl FontFamily {
         }
     }
 }
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct StyleSheet;

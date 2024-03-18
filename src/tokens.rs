@@ -74,6 +74,7 @@ pub enum ControlWord<'a> {
 
     ColorTable,
     FileTable,
+    StyleSheet,
 
     Italic,
     Bold,
@@ -139,48 +140,49 @@ impl<'a> ControlWord<'a> {
 
         #[rustfmt::skip]
             let control_word = match prefix {
-            r"\rtf"       => ControlWord::Rtf,
-            r"\ansi"      => ControlWord::Ansi,
+            r"\rtf"           => ControlWord::Rtf,
+            r"\ansi"          => ControlWord::Ansi,
             // Header
-            r"\fonttbl"   => ControlWord::FontTable,
-            r"\colortabl" => ControlWord::ColorTable,
-            r"\filetbl"    => ControlWord::FileTable,
+            r"\fonttbl"       => ControlWord::FontTable,
+            r"\colortabl"     => ControlWord::ColorTable,
+            r"\filetbl"        => ControlWord::FileTable,
+            r"\stylesheet"    => ControlWord::StyleSheet,
             // Font
-            r"\fcharset"  => ControlWord::FontCharset,
-            r"\f"         => ControlWord::FontNumber,
-            r"\fs"        => ControlWord::FontSize,
+            r"\fcharset"      => ControlWord::FontCharset,
+            r"\f"             => ControlWord::FontNumber,
+            r"\fs"            => ControlWord::FontSize,
             // Format
-            r"\i"         => ControlWord::Italic,
-            r"\b"         => ControlWord::Bold,
-            r"\u"         => ControlWord::Underline,
-            r"\ul"        => ControlWord::Underline,
-            r"\super"     => ControlWord::Superscript,
-            r"\sub"       => ControlWord::Subscript,
-            r"\scaps"     => ControlWord::Smallcaps,
-            r"\strike"    => ControlWord::Strikethrough,
+            r"\i"             => ControlWord::Italic,
+            r"\b"             => ControlWord::Bold,
+            r"\u"             => ControlWord::Underline,
+            r"\ul"            => ControlWord::Underline,
+            r"\super"         => ControlWord::Superscript,
+            r"\sub"           => ControlWord::Subscript,
+            r"\scaps"         => ControlWord::Smallcaps,
+            r"\strike"        => ControlWord::Strikethrough,
             // Paragraph
-            r"\par"       => ControlWord::Par,
-            r"\pard"      => ControlWord::Pard,
-            r"\sectd"     => ControlWord::Sectd,
-            r"\plain"     => ControlWord::Plain,
-            r"\s"         => ControlWord::ParStyle,
-            r"\pardeftab" => ControlWord::ParDefTab,
+            r"\par"           => ControlWord::Par,
+            r"\pard"          => ControlWord::Pard,
+            r"\sectd"         => ControlWord::Sectd,
+            r"\plain"         => ControlWord::Plain,
+            r"\s"             => ControlWord::ParStyle,
+            r"\pardeftab"     => ControlWord::ParDefTab,
             // Paragraph alignment
-            r"\ql"        => ControlWord::LeftAligned,
-            r"\qr"        => ControlWord::RightAligned,
-            r"\qj"        => ControlWord::Justify,
-            r"\qc"        => ControlWord::Center,
+            r"\ql"            => ControlWord::LeftAligned,
+            r"\qr"            => ControlWord::RightAligned,
+            r"\qj"            => ControlWord::Justify,
+            r"\qc"            => ControlWord::Center,
             // Paragraph indent
-            r"\fi"         => ControlWord::FirstLineIdent,
-            r"\ri"        => ControlWord::RightIndent,
-            r"\li"        => ControlWord::LeftIndent,
+            r"\fi"             => ControlWord::FirstLineIdent,
+            r"\ri"            => ControlWord::RightIndent,
+            r"\li"            => ControlWord::LeftIndent,
             // Paragraph Spacing
-            r"\sb"        => ControlWord::SpaceBefore,
-            r"\sa"        => ControlWord::SpaceAfter,
-            r"\sl"        => ControlWord::SpaceBetweenLine,
-            r"\slmul"     => ControlWord::SpaceLineMul,
+            r"\sb"            => ControlWord::SpaceBefore,
+            r"\sa"            => ControlWord::SpaceAfter,
+            r"\sl"            => ControlWord::SpaceBetweenLine,
+            r"\slmul"         => ControlWord::SpaceLineMul,
             // Unknown
-            _             => ControlWord::Unknown(prefix),
+            _                 => ControlWord::Unknown(prefix),
         };
         return Ok((control_word, property));
     }
