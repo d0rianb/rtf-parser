@@ -18,9 +18,9 @@ impl StrUtils for str {
             }
         }
         if first_whitespace_index > 0 && first_whitespace_index != self.len() {
-            (&self[0..first_whitespace_index], &self[first_whitespace_index + 1..])
+            return (&self[0..first_whitespace_index], &self[first_whitespace_index + 1..]);
         } else {
-            (self, "")
+            return (self, "");
         }
     }
 

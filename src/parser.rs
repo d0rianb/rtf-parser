@@ -71,7 +71,9 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token<'a>>) -> Self { Self { tokens, cursor: 0 } }
+    pub fn new(tokens: Vec<Token<'a>>) -> Self {
+        return Self { tokens, cursor: 0 };
+    }
 
     fn check_document_validity(&self) -> Result<(), ParserError> {
         // Check the document boundaries
@@ -178,10 +180,14 @@ impl<'a> Parser<'a> {
         return Ok(());
     }
 
-    fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> { return self.tokens.get(index); }
+    fn get_token_at(&'a self, index: usize) -> Option<&'a Token<'a>> {
+        return self.tokens.get(index);
+    }
 
     // Get a view of the next token after cursor
-    fn get_next_token(&'a self) -> Option<&'a Token<'a>> { return self.get_token_at(self.cursor); }
+    fn get_next_token(&'a self) -> Option<&'a Token<'a>> {
+        return self.get_token_at(self.cursor);
+    }
 
     fn consume_token_at(&mut self, index: usize) -> Option<Token<'a>> {
         if self.tokens.is_empty() {
@@ -190,7 +196,9 @@ impl<'a> Parser<'a> {
         Some(self.tokens.remove(index))
     }
 
-    fn consume_next_token(&mut self) -> Option<Token<'a>> { return self.consume_token_at(self.cursor); }
+    fn consume_next_token(&mut self) -> Option<Token<'a>> {
+        return self.consume_token_at(self.cursor);
+    }
 
     // Consume token from cursor to <reference-token>
     fn _consume_tokens_until(&mut self, reference_token: Token<'a>) -> Vec<Token<'a>> {
@@ -316,7 +324,7 @@ impl<'a> Parser<'a> {
 
     fn parse_stylesheet(stylesheet_tokens: &Vec<Token<'a>>) -> Result<StyleSheet, ParserError> {
         // TODO
-        return Ok(StyleSheet {});
+        return Ok(StyleSheet::from([]));
     }
 
     // Traverse all the tokens and consume the ignore groups

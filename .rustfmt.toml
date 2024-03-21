@@ -4,7 +4,7 @@ comment_width = 150
 
 edition = "2021"
 
-fn_single_line = true
+fn_single_line = false
 
 reorder_imports = true
 imports_granularity = "Module"

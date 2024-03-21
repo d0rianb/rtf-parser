@@ -1,9 +1,20 @@
 use std::collections::HashMap;
 
+use crate::paragraph::Paragraph;
+use crate::parser::Painter;
 use crate::tokens::{ControlWord, Token};
 
 pub type FontRef = u16;
 pub type FontTable = HashMap<FontRef, Font>;
+
+pub type StyleRef = u16;
+pub type StyleSheet = HashMap<StyleRef, Style>;
+
+#[derive(Hash, Default, Debug, Clone, PartialEq)]
+pub struct Style {
+    painter: Painter,
+    paragraph: Paragraph,
+}
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct RtfHeader {
@@ -60,11 +71,12 @@ impl FontFamily {
             r"\fnil" => Some(Self::Nil),
             r"\froman" => Some(Self::Roman),
             r"\fswiss" => Some(Self::Swiss),
-            // TODO: implement the rest
+            r"\fmodern" => Some(Self::Modern),
+            r"\fscript" => Some(Self::Script),
+            r"\fdecor" => Some(Self::Decor),
+            r"\ftech" => Some(Self::Tech),
+            r"\fbidi" => Some(Self::Bidi),
             _ => None,
         }
     }
 }
-
-#[derive(Default, Debug, Clone, PartialEq)]
-pub struct StyleSheet;

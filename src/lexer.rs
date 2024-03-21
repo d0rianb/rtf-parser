@@ -26,10 +26,14 @@ impl fmt::Display for LexerError {
 }
 
 impl From<std::str::Utf8Error> for LexerError {
-    fn from(value: std::str::Utf8Error) -> Self { return LexerError::Error(value.to_string()); }
+    fn from(value: std::str::Utf8Error) -> Self {
+        return LexerError::Error(value.to_string());
+    }
 }
 impl From<std::num::ParseIntError> for LexerError {
-    fn from(value: std::num::ParseIntError) -> Self { return LexerError::Error(value.to_string()); }
+    fn from(value: std::num::ParseIntError) -> Self {
+        return LexerError::Error(value.to_string());
+    }
 }
 
 pub struct Lexer;
