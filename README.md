@@ -17,6 +17,7 @@ let tokens: Vec<Token> = Lexer::scan("<rtf>")?;
 These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.
 ```rust
 use rtf_parser::parser::Parser;
+use rtf_parser::document::RtfDocument;
 
 let parser = Parser::new(tokens);
 let doc: RtfDocument = parser.parse()?;
@@ -27,7 +28,7 @@ An `RtfDocument` is composed with :
 - the **body**, which is a `Vec<StyledBlock>`
 
 A `StyledBlock` contains all the information about the formatting of a specific block of text.  
-It contains a `Painter` and the text (`String`).
+It contains a `Painter` for the text style, a `Paragraph` for the layout, and the text (`String`).
 The `Painter` is defined below, and the rendering implementation depends on the user.
 ```rust
 pub struct Painter {

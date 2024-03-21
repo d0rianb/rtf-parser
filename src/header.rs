@@ -10,12 +10,14 @@ pub type FontTable = HashMap<FontRef, Font>;
 pub type StyleRef = u16;
 pub type StyleSheet = HashMap<StyleRef, Style>;
 
+/// Style for the StyleSheet
 #[derive(Hash, Default, Debug, Clone, PartialEq)]
 pub struct Style {
     painter: Painter,
     paragraph: Paragraph,
 }
 
+/// Information about the document, including references to fonts & styles
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct RtfHeader {
     pub character_set: CharacterSet,

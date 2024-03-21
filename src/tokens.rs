@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::lexer::LexerError;
 
+/// Parser representation of an RTF token
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Clone)]
 pub enum Token<'a> {
@@ -30,11 +31,11 @@ impl<'a> fmt::Debug for Token<'a> {
     }
 }
 
-// A control symbol is a pair (control_word, property)
-// In the RTF specification, it refers to 'control word entity'
+/// A control symbol is a pair (control_word, property)
+/// In the RTF specification, it refers to 'control word entity'
 pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 
-// Parameters for a control word
+/// Parameters for a control word
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Property {
@@ -102,7 +103,7 @@ pub enum ControlWord<'a> {
     // Paragraph spacing
     SpaceBefore,
     SpaceAfter,
-    SpaceBetweenLine, // 	If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line; if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used); if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
+    SpaceBetweenLine,
     SpaceLineMul, // Line spacing multiple. Indicates that the current line spacing is a multiple of "Single" line spacing. This control word can follow only the \sl control word and works in conjunction with it.
 
     Unknown(&'a str),
@@ -139,7 +140,7 @@ impl<'a> ControlWord<'a> {
         };
 
         #[rustfmt::skip]
-            let control_word = match prefix {
+        let control_word = match prefix {
             r"\rtf"           => ControlWord::Rtf,
             r"\ansi"          => ControlWord::Ansi,
             // Header

@@ -25,7 +25,7 @@ pub struct StyleBlock {
     pub text: String,
 }
 
-#[derive(Derivative, Debug, Clone, PartialEq)]
+#[derive(Derivative, Debug, Clone, PartialEq, Hash)]
 #[derivative(Default)]
 pub struct Painter {
     pub font_ref: FontRef,

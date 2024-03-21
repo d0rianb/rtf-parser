@@ -2,7 +2,7 @@
 
 use crate::tokens::ControlWord;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Hash)]
 pub struct Paragraph {
     pub alignment: Alignment,
     pub spacing: Spacing,
@@ -10,13 +10,14 @@ pub struct Paragraph {
     pub tab_width: i32,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+/// Alignement of a paragraph (left, right, center, justify)
+#[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
 pub enum Alignment {
     #[default]
-    LeftAligned,
-    RightAligned,
-    Center,
-    Justify,
+    LeftAligned,    // \ql
+    RightAligned,   // \qr
+    Center,         // \qc
+    Justify,        // \qj
 }
 
 impl From<&ControlWord<'_>> for Alignment {
@@ -31,7 +32,8 @@ impl From<&ControlWord<'_>> for Alignment {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+/// The vertical margin before / after a block of text
+#[derive(Debug, Default, Clone, PartialEq, Hash)]
 pub struct Spacing {
     pub before: i32,
     pub after: i32,
@@ -39,7 +41,7 @@ pub struct Spacing {
     pub line_multiplier: i32,
 }
 
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq, Hash)]
 pub enum SpaceBetweenLine {
     Value(i32),
     #[default]
@@ -47,7 +49,10 @@ pub enum SpaceBetweenLine {
     Invalid,
 }
 
-//Space between lines. If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line; if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used); if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
+// Space between lines.
+// If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line;
+// if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used);
+// if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
 impl From<i32> for SpaceBetweenLine {
     fn from(value: i32) -> Self {
         return match value {
@@ -58,8 +63,8 @@ impl From<i32> for SpaceBetweenLine {
     }
 }
 
-// Could not be an enum because left-indent and right-ident can both be defined at the same time
-#[derive(Default, Debug, Clone, PartialEq)]
+// This struct can not be an enum because left-indent and right-ident can both be defined at the same time
+#[derive(Default, Debug, Clone, PartialEq, Hash)]
 pub struct Indentation {
     pub left: i32,
     pub right: i32,
