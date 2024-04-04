@@ -1,6 +1,17 @@
 use crate::header::RtfHeader;
 use crate::parser::StyleBlock;
 
+#[cfg(feature="serde_support")]
+use serde::{Deserialize, Serialize};
+
+#[cfg(feature="serde_support")]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
+pub struct RtfDocument {
+    pub header: RtfHeader,
+    pub body: Vec<StyleBlock>,
+}
+
+#[cfg(not(feature="serde_support"))]
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct RtfDocument {
     pub header: RtfHeader,

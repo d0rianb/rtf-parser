@@ -3,6 +3,9 @@ use std::{fmt, mem};
 
 use derivative::Derivative;
 
+#[cfg(feature="serde_support")]
+use serde::{Deserialize, Serialize};
+
 use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Color, ColorRef, ColorTable, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
 use crate::paragraph::{Alignment, Paragraph, SpaceBetweenLine};
@@ -18,6 +21,15 @@ macro_rules! header_control_word {
     };
 }
 
+#[cfg(feature="serde_support")]
+#[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
+pub struct StyleBlock {
+    pub painter: Painter,
+    pub paragraph: Paragraph,
+    pub text: String,
+}
+
+#[cfg(not(feature="serde_support"))]
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct StyleBlock {
     pub painter: Painter,
@@ -25,6 +37,23 @@ pub struct StyleBlock {
     pub text: String,
 }
 
+#[cfg(feature="serde_support")]
+#[derive(Derivative, Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
+#[derivative(Default)]
+pub struct Painter {
+    pub color_ref: ColorRef,
+    pub font_ref: FontRef,
+    #[derivative(Default(value = "12"))]
+    pub font_size: u16,
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
+    pub superscript: bool,
+    pub subscript: bool,
+    pub smallcaps: bool,
+    pub strike: bool,
+}
+#[cfg(not(feature="serde_support"))]
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
 #[derivative(Default)]
 pub struct Painter {
