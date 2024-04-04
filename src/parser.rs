@@ -121,7 +121,6 @@ impl<'a> Parser<'a> {
                     let Some(current_painter) = painter_stack.last_mut() else {
                         return Err(ParserError::MalformedPainterStack);
                     };
-                    println!("{:?} {:?}", control_word, property);
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
                         ControlWord::ColorNumber        => current_painter.color_ref = property.get_value() as ColorRef,
@@ -147,6 +146,11 @@ impl<'a> Parser<'a> {
                         ControlWord::SpaceAfter         => paragraph.spacing.after = property.get_value(),
                         ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
                         ControlWord::SpaceLineMul       => paragraph.spacing.line_multiplier = property.get_value(),
+                        ControlWord::Unicode            => {
+                            let unicode = property.get_value() as u16;
+                            let str = String::from_utf16(&vec![unicode]).unwrap();
+                            Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?
+                        }
                         // Others
                         _ => {}
                     };
@@ -649,5 +653,22 @@ pub mod tests {
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].painter.underline, &true);
         assert_eq!(&document.body[1].painter.underline, &false);
+    }
+
+    #[test]
+    fn parse_unicode() {
+        // start with \\uc0
+        // \u21834 => 啊
+        let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
+            \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+            {\colortbl;\red255\green255\blue255;}
+            {\*\expandedcolortbl;;}
+            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+            
+            \f0\fs24 \cf0 \uc0\u21834 }"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].text, "啊");
     }
 }

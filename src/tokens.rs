@@ -68,6 +68,8 @@ pub enum ControlWord<'a> {
     Rtf,
     Ansi,
 
+    Unicode,
+
     FontTable,
     FontCharset,
     FontNumber,
@@ -158,7 +160,7 @@ impl<'a> ControlWord<'a> {
             // Format
             r"\i"             => ControlWord::Italic,
             r"\b"             => ControlWord::Bold,
-            r"\u"             => ControlWord::Underline,
+            r"\u"             => ControlWord::Unicode,
             r"\ul"            => ControlWord::Underline,
             r"\ulnone"        => ControlWord::UnderlineNone,
             r"\super"         => ControlWord::Superscript,
