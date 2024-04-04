@@ -72,6 +72,7 @@ pub enum ControlWord<'a> {
     FontCharset,
     FontNumber,
     FontSize, // Expressed in half point
+    ColorNumber,
 
     ColorTable,
     FileTable,
@@ -145,13 +146,14 @@ impl<'a> ControlWord<'a> {
             r"\ansi"          => ControlWord::Ansi,
             // Header
             r"\fonttbl"       => ControlWord::FontTable,
-            r"\colortabl"     => ControlWord::ColorTable,
-            r"\filetbl"        => ControlWord::FileTable,
+            r"\colortbl"      => ControlWord::ColorTable,
+            r"\filetbl"       => ControlWord::FileTable,
             r"\stylesheet"    => ControlWord::StyleSheet,
             // Font
             r"\fcharset"      => ControlWord::FontCharset,
             r"\f"             => ControlWord::FontNumber,
             r"\fs"            => ControlWord::FontSize,
+            r"\cf"            => ControlWord::ColorNumber,
             // Format
             r"\i"             => ControlWord::Italic,
             r"\b"             => ControlWord::Bold,

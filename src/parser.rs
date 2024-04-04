@@ -4,7 +4,7 @@ use std::{fmt, mem};
 use derivative::Derivative;
 
 use crate::document::RtfDocument;
-use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
+use crate::header::{CharacterSet, Color, ColorRef, ColorTable, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
 use crate::paragraph::{Alignment, Paragraph, SpaceBetweenLine};
 use crate::tokens::{ControlWord, Property, Token};
 
@@ -28,6 +28,7 @@ pub struct StyleBlock {
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
 #[derivative(Default)]
 pub struct Painter {
+    pub color_ref: ColorRef,
     pub font_ref: FontRef,
     #[derivative(Default(value = "12"))]
     pub font_size: u16,
@@ -46,6 +47,7 @@ pub enum ParserError {
     IgnorableDestinationParsingError,
     MalformedPainterStack,
     InvalidFontIdentifier(Property),
+    InvalidColorIdentifier(Property),
     NoMoreToken,
 }
 
@@ -59,6 +61,7 @@ impl fmt::Display for ParserError {
             ParserError::IgnorableDestinationParsingError => write!(f, "No ignorable destination should be left"),
             ParserError::MalformedPainterStack => write!(f, "Malformed painter stack : Unbalanced number of brackets"),
             ParserError::InvalidFontIdentifier(property) => write!(f, "Invalid font identifier : {:?}", property),
+            ParserError::InvalidColorIdentifier(property) => write!(f, "Invalid color identifier : {:?}", property),
             ParserError::NoMoreToken => write!(f, "No more token to parse"),
         };
         return Ok(());
@@ -120,6 +123,7 @@ impl<'a> Parser<'a> {
                     };
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
+                        ControlWord::ColorNumber         => current_painter.color_ref = property.get_value() as ColorRef,
                         ControlWord::FontNumber         => current_painter.font_ref = property.get_value() as FontRef,
                         ControlWord::FontSize           => current_painter.font_size = property.get_value() as u16,
                         ControlWord::Bold               => current_painter.bold = property.as_bool(),
@@ -246,6 +250,14 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
+                (Some(Token::OpeningBracket), Some(&header_control_word!(ColorTable, None))) => {
+                    let color_table_tokens = self.consume_tokens_until_matching_bracket();
+                    header.color_table = Self::parse_color_table(&color_table_tokens)?;
+                    // After the color table, check if next token is plain text without consuming it. If so, break
+                    if let Some(&Token::PlainText(_text)) = self.get_next_token() {
+                        break;
+                    }
+                }
                 (Some(Token::OpeningBracket), Some(&header_control_word!(StyleSheet, None))) => {
                     let stylesheet_tokens = self.consume_tokens_until_matching_bracket();
                     header.stylesheet = Self::parse_stylesheet(&stylesheet_tokens)?;
@@ -316,6 +328,46 @@ impl<'a> Parser<'a> {
                 Token::ClosingBracket => {
                     table.insert(current_key, current_font.clone());
                 } // Insert previous font
+                _ => {}
+            }
+        }
+        return Ok(table);
+    }
+
+    fn parse_color_table(color_table_tokens: &Vec<Token<'a>>) -> Result<ColorTable, ParserError> {
+        let Some(color_table_first_token) = color_table_tokens.get(0) else {
+            return Err(ParserError::NoMoreToken);
+        };
+        if color_table_first_token != &header_control_word!(ColorTable, None) {
+            return Err(ParserError::InvalidToken(format!("ParserError: {:?} is not a ColorTable token", color_table_first_token)));
+        }
+        let mut table = HashMap::new();
+        let mut current_key = 1;
+        let mut current_color = Color::default();
+        for token in color_table_tokens.iter() {
+            match token {
+                Token::ControlSymbol((control_word, property)) => match control_word {
+                    ControlWord::Unknown(name) => {
+                        if let Property::Value(key) = property {
+                            match *name {
+                                "\\red" => {
+                                    current_color.red = *key as u16;
+                                }
+                                "\\green" => {
+                                    current_color.green = *key as u16;
+                                }
+                                "\\blue" => {
+                                    // \\blue is end of this color
+                                    current_color.blue = *key as u16;
+                                    table.insert(current_key, current_color.clone());
+                                    current_key += 1;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         }
@@ -557,5 +609,25 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(document.body[0].painter, Painter::default());
+    }
+
+    #[test]
+    fn parse_color_table() {
+        // cf0 is unset color
+        // cf1 is first color
+        // cf2 is second color
+        // etc...
+        let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
+            \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset134 PingFangSC-Regular;}
+            {\colortbl;\red255\green255\blue255;\red251\green2\blue7;\red114\green44\blue253;}
+            {\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;\cssrgb\c52799\c30710\c99498;}
+            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+            
+            \f0\fs24 \cf2 A
+            \f1 \cf3 B}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(document.header.color_table.get(&document.body[0].painter.color_ref).unwrap(), &Color { red: 251, green: 2, blue: 7 });
     }
 }

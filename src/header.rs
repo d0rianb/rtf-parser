@@ -4,6 +4,9 @@ use crate::paragraph::Paragraph;
 use crate::parser::Painter;
 use crate::tokens::{ControlWord, Token};
 
+pub type ColorRef = u16;
+pub type ColorTable = HashMap<ColorRef, Color>;
+
 pub type FontRef = u16;
 pub type FontTable = HashMap<FontRef, Font>;
 
@@ -22,6 +25,7 @@ pub struct Style {
 pub struct RtfHeader {
     pub character_set: CharacterSet,
     pub font_table: FontTable,
+    pub color_table: ColorTable,
     pub stylesheet: StyleSheet,
 }
 
@@ -30,6 +34,13 @@ pub struct Font {
     pub name: String,
     pub character_set: u8,
     pub font_family: FontFamily,
+}
+
+#[derive(Hash, Default, Clone, Debug, PartialEq)]
+pub struct Color {
+    pub red: u16,
+    pub green: u16,
+    pub blue: u16,
 }
 
 #[allow(dead_code)]
