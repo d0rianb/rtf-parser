@@ -147,8 +147,9 @@ impl Lexer {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use crate::header::Color;
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, ColorNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 
@@ -202,7 +203,7 @@ if (a == b) \{\
             vec![
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((FontSize, Value(24))),
-                ControlSymbol((Unknown("\\cf"), Value(0))),
+                ControlSymbol((ColorNumber, Value(0))),
                 PlainText("test de code "),
                 CRLF,
                 PlainText("if (a == b) "),
@@ -266,7 +267,7 @@ if (a == b) \{\
                 OpeningBracket,
                 ControlSymbol((Unknown("\\partightenfactor"), Value(0))),
                 ControlSymbol((FontSize, Value(24))),
-                ControlSymbol((Unknown("\\cf"), Value(0))),
+                ControlSymbol((ColorNumber, Value(0))),
                 PlainText("Font size 12,"),
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((Bold, None)),

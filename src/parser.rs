@@ -507,6 +507,9 @@ pub mod tests {
                         }
                     )
                 ]),
+                color_table: ColorTable::from([
+                    (1, Color { red: 255, green: 255, blue: 255 }),
+                ]),
                 ..RtfHeader::default()
             }
         );
@@ -614,7 +617,10 @@ pub mod tests {
         let rtf = r"{\rtf1{\fonttbl {\f0 Times;}}\f0\b\fs36\u\cf2\plain Plain text}";
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(document.body[0].painter, Painter::default());
+        let mut painter = Painter::default();
+        painter.bold = true;
+        painter.font_size = 36;
+        assert_eq!(document.body[0].painter, painter);
     }
 
     #[test]
