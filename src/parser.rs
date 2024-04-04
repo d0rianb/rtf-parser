@@ -121,14 +121,16 @@ impl<'a> Parser<'a> {
                     let Some(current_painter) = painter_stack.last_mut() else {
                         return Err(ParserError::MalformedPainterStack);
                     };
+                    println!("{:?} {:?}", control_word, property);
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
-                        ControlWord::ColorNumber         => current_painter.color_ref = property.get_value() as ColorRef,
+                        ControlWord::ColorNumber        => current_painter.color_ref = property.get_value() as ColorRef,
                         ControlWord::FontNumber         => current_painter.font_ref = property.get_value() as FontRef,
                         ControlWord::FontSize           => current_painter.font_size = property.get_value() as u16,
                         ControlWord::Bold               => current_painter.bold = property.as_bool(),
                         ControlWord::Italic             => current_painter.italic = property.as_bool(),
                         ControlWord::Underline          => current_painter.underline = property.as_bool(),
+                        ControlWord::UnderlineNone      => current_painter.underline = false,
                         ControlWord::Superscript        => current_painter.superscript = property.as_bool(),
                         ControlWord::Subscript          => current_painter.subscript = property.as_bool(),
                         ControlWord::Smallcaps          => current_painter.smallcaps = property.as_bool(),
@@ -629,5 +631,23 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(document.header.color_table.get(&document.body[0].painter.color_ref).unwrap(), &Color { red: 251, green: 2, blue: 7 });
+    }
+
+    #[test]
+    fn parse_underline() {
+        // \\ul underline true
+        // \\ulnone underline false
+        let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
+            \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+            {\colortbl;\red255\green255\blue255;}
+            {\*\expandedcolortbl;;}
+            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+            
+            \f0\fs24 \cf0 \ul \ulc0 a\ulnone A}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].painter.underline, &true);
+        assert_eq!(&document.body[1].painter.underline, &false);
     }
 }

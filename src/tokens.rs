@@ -81,6 +81,7 @@ pub enum ControlWord<'a> {
     Italic,
     Bold,
     Underline,
+    UnderlineNone,
     Superscript, // 5th
     Subscript,   // H20
     Smallcaps,
@@ -159,6 +160,7 @@ impl<'a> ControlWord<'a> {
             r"\b"             => ControlWord::Bold,
             r"\u"             => ControlWord::Underline,
             r"\ul"            => ControlWord::Underline,
+            r"\ulnone"        => ControlWord::UnderlineNone,
             r"\super"         => ControlWord::Superscript,
             r"\sub"           => ControlWord::Subscript,
             r"\scaps"         => ControlWord::Smallcaps,
