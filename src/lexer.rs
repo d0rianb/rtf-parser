@@ -121,6 +121,12 @@ impl Lexer {
                     let control_word = ControlWord::from(ident)?;
                     let mut ret = vec![Token::ControlSymbol(control_word)];
                     recursive_tokenize!(tail, ret);
+
+                    // \u1234 \u1234 is ok, but \u1234  \u1234 is lost a space, \u1234   \u1234 lost two spaces, and so on
+                    if control_word.0 == ControlWord::Unicode && tail.len() > 0 {
+                        ret.push(Token::PlainText(tail));
+                    }
+                    
                     return Ok(ret);
                 }
                 '*' => Ok(vec![Token::IgnorableDestination]),
