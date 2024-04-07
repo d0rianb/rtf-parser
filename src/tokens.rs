@@ -1,6 +1,9 @@
+use std::any::type_name;
+use std::convert::TryFrom;
 use std::fmt;
 
 use crate::lexer::LexerError;
+use crate::parser::ParserError;
 
 /// Parser representation of an RTF token
 #[allow(dead_code)]
@@ -55,11 +58,19 @@ impl Property {
         }
     }
 
-    pub fn get_value(&self) -> i32 {
+    // Retrieve and cast the i32 value to a specific numeric type
+    pub fn get_value_as<T: TryFrom<i32>>(&self) -> Result<T, ParserError> {
+        let error: Result<T, ParserError> = Err(ParserError::ValueCastError(type_name::<T>().to_string()));
         if let Property::Value(value) = &self {
-            return *value;
+            return T::try_from(*value).or(error);
         }
-        return 0;
+        // If no value, returns 0
+        return T::try_from(0).or(error);
+    }
+
+    // Default variant
+    pub fn get_value(&self) -> i32 {
+        return self.get_value_as::<i32>().expect("i32 to i32 conversion should never fail");
     }
 }
 

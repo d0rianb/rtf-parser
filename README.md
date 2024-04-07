@@ -24,7 +24,7 @@ let doc: RtfDocument = parser.parse()?;
 ```
 
 An `RtfDocument` is composed with : 
-- the **header**, containing among others the font table and the encoding.
+- the **header**, containing among others the font table, the color table and the encoding.
 - the **body**, which is a `Vec<StyledBlock>`
 
 A `StyledBlock` contains all the information about the formatting of a specific block of text.  

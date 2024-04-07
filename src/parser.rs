@@ -3,7 +3,7 @@ use std::{fmt, mem};
 
 use derivative::Derivative;
 
-#[cfg(feature="serde_support")]
+#[cfg(feature = "serde_support")]
 use serde::{Deserialize, Serialize};
 
 use crate::document::RtfDocument;
@@ -54,6 +54,7 @@ pub enum ParserError {
     InvalidFontIdentifier(Property),
     InvalidColorIdentifier(Property),
     NoMoreToken,
+    ValueCastError(String),
 }
 
 impl std::error::Error for ParserError {}
@@ -61,15 +62,15 @@ impl std::error::Error for ParserError {}
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let _ = write!(f, "[RTF Parser] : ");
-        let _ = match self {
+        return match self {
             ParserError::InvalidToken(msg) => write!(f, "{}", msg),
             ParserError::IgnorableDestinationParsingError => write!(f, "No ignorable destination should be left"),
             ParserError::MalformedPainterStack => write!(f, "Malformed painter stack : Unbalanced number of brackets"),
             ParserError::InvalidFontIdentifier(property) => write!(f, "Invalid font identifier : {:?}", property),
             ParserError::InvalidColorIdentifier(property) => write!(f, "Invalid color identifier : {:?}", property),
             ParserError::NoMoreToken => write!(f, "No more token to parse"),
+            ParserError::ValueCastError(T) => write!(f, "Unable to cast i32 to {T}"),
         };
-        return Ok(());
     }
 }
 
@@ -128,9 +129,9 @@ impl<'a> Parser<'a> {
                     };
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
-                        ControlWord::ColorNumber        => current_painter.color_ref = property.get_value() as ColorRef,
-                        ControlWord::FontNumber         => current_painter.font_ref = property.get_value() as FontRef,
-                        ControlWord::FontSize           => current_painter.font_size = property.get_value() as u16,
+                        ControlWord::ColorNumber        => current_painter.color_ref = property.get_value_as::<ColorRef>()?,
+                        ControlWord::FontNumber         => current_painter.font_ref = property.get_value_as::<FontRef>()?,
+                        ControlWord::FontSize           => current_painter.font_size = property.get_value_as::<u16>()?,
                         ControlWord::Bold               => current_painter.bold = property.as_bool(),
                         ControlWord::Italic             => current_painter.italic = property.as_bool(),
                         ControlWord::Underline          => current_painter.underline = property.as_bool(),
@@ -152,7 +153,7 @@ impl<'a> Parser<'a> {
                         ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
                         ControlWord::SpaceLineMul       => paragraph.spacing.line_multiplier = property.get_value(),
                         ControlWord::Unicode            => {
-                            let unicode = property.get_value() as u16;
+                            let unicode = property.get_value_as::<u16>()?;
                             let str = String::from_utf16(&vec![unicode]).unwrap();
                             Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?
                         }
@@ -358,10 +359,10 @@ impl<'a> Parser<'a> {
         for token in color_table_tokens.iter() {
             match token {
                 Token::ControlSymbol((control_word, property)) => match control_word {
-                    ControlWord::ColorRed => current_color.red = property.get_value() as u16,
-                    ControlWord::ColorGreen => current_color.green = property.get_value() as u16,
+                    ControlWord::ColorRed => current_color.red = property.get_value_as::<u8>()?,
+                    ControlWord::ColorGreen => current_color.green = property.get_value_as::<u8>()?,
                     ControlWord::ColorBlue => {
-                        current_color.blue = property.get_value() as u16;
+                        current_color.blue = property.get_value_as::<u8>()?;
                         table.insert(current_key, current_color.clone());
                         current_key += 1;
                     }
@@ -500,9 +501,7 @@ pub mod tests {
                         }
                     )
                 ]),
-                color_table: ColorTable::from([
-                    (1, Color { red: 255, green: 255, blue: 255 }),
-                ]),
+                color_table: ColorTable::from([(1, Color { red: 255, green: 255, blue: 255 }),]),
                 ..RtfHeader::default()
             }
         );
@@ -666,7 +665,7 @@ pub mod tests {
             \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
             
             \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
-            // \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
+        // \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].text, "啊 啊");

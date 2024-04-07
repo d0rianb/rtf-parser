@@ -30,6 +30,7 @@ impl From<std::str::Utf8Error> for LexerError {
         return LexerError::Error(value.to_string());
     }
 }
+
 impl From<std::num::ParseIntError> for LexerError {
     fn from(value: std::num::ParseIntError) -> Self {
         return LexerError::Error(value.to_string());
@@ -126,7 +127,6 @@ impl Lexer {
                     if control_word.0 == ControlWord::Unicode && tail.len() > 0 {
                         ret.push(Token::PlainText(tail));
                     }
-                    
                     return Ok(ret);
                 }
                 '*' => Ok(vec![Token::IgnorableDestination]),
@@ -154,7 +154,7 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, ColorNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, ColorRed, ColorGreen, ColorBlue, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, ColorBlue, ColorGreen, ColorNumber, ColorRed, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 

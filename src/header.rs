@@ -1,18 +1,24 @@
 use std::collections::HashMap;
 
-#[cfg(feature="serde_support")]
+#[cfg(feature = "serde_support")]
 use serde::{Deserialize, Serialize};
 
 use crate::paragraph::Paragraph;
 use crate::parser::Painter;
 use crate::tokens::{ControlWord, Token};
 
+/// The ColorRef represent the index of the color in the ColorTable
+/// It's use in the document's body to reference a specific color with the \cfN or \cbN control words
 pub type ColorRef = u16;
 pub type ColorTable = HashMap<ColorRef, Color>;
 
+/// The FontRef represent the index of the color in the FontTable
+/// It's use in the document's body to reference a specific font with the \fN control word
 pub type FontRef = u16;
 pub type FontTable = HashMap<FontRef, Font>;
 
+/// The StyleRef represent the index of the style in the StyleSheet
+/// It's use in the document's body to reference a specific style with the \sN control word
 pub type StyleRef = u16;
 pub type StyleSheet = HashMap<StyleRef, Style>;
 
@@ -20,7 +26,9 @@ pub type StyleSheet = HashMap<StyleRef, Style>;
 #[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Hash, Default, Debug, Clone, PartialEq)]
 pub struct Style {
+    /// The style attributes
     painter: Painter,
+    /// The layout attributes
     paragraph: Paragraph,
 }
 
@@ -45,9 +53,9 @@ pub struct Font {
 #[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
 pub struct Color {
-    pub red: u16,
-    pub green: u16,
-    pub blue: u16,
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
 }
 
 #[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]

@@ -1,7 +1,8 @@
 // Define the paragraph related structs and enums
 
-#[cfg(feature="serde_support")]
+#[cfg(feature = "serde_support")]
 use serde::{Deserialize, Serialize};
+
 use crate::tokens::ControlWord;
 
 #[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
@@ -18,10 +19,10 @@ pub struct Paragraph {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
 pub enum Alignment {
     #[default]
-    LeftAligned,    // \ql
-    RightAligned,   // \qr
-    Center,         // \qc
-    Justify,        // \qj
+    LeftAligned, // \ql
+    RightAligned, // \qr
+    Center,       // \qc
+    Justify,      // \qj
 }
 
 impl From<&ControlWord<'_>> for Alignment {

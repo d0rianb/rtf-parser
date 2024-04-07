@@ -1,8 +1,8 @@
+#[cfg(feature = "serde_support")]
+use serde::{Deserialize, Serialize};
+
 use crate::header::RtfHeader;
 use crate::parser::StyleBlock;
-
-#[cfg(feature="serde_support")]
-use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, Clone, PartialEq)]
