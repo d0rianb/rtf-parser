@@ -5,7 +5,7 @@ repository = "https://github.com/d0rianb/rtf-parser"
 version = "0.2.1"
 edition = "2021"
 license = "MIT"
-keywords = ["rtf", "rich" ,"text", "format", "parser"]
+keywords = ["rtf", "rich", "text", "format", "parser"]
 categories = ["parsing", "parser-implementations"]
 exclude = ["*.rtf", ".idea"]
 
@@ -15,4 +15,7 @@ opt-level = 3
 
 [dependencies]
 derivative = "2.2.0"
+serde = { version = "1.0", optional = true, features = ["derive"] }
 
+[features]
+serde_support = ["serde"]

@@ -121,6 +121,12 @@ impl Lexer {
                     let control_word = ControlWord::from(ident)?;
                     let mut ret = vec![Token::ControlSymbol(control_word)];
                     recursive_tokenize!(tail, ret);
+
+                    // \u1234 \u1234 is ok, but \u1234  \u1234 is lost a space, \u1234   \u1234 lost two spaces, and so on
+                    if control_word.0 == ControlWord::Unicode && tail.len() > 0 {
+                        ret.push(Token::PlainText(tail));
+                    }
+                    
                     return Ok(ret);
                 }
                 '*' => Ok(vec![Token::IgnorableDestination]),
@@ -148,7 +154,7 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, ColorNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, ColorRed, ColorGreen, ColorBlue, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 
@@ -202,7 +208,7 @@ if (a == b) \{\
             vec![
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((FontSize, Value(24))),
-                ControlSymbol((Unknown("\\cf"), Value(0))),
+                ControlSymbol((ColorNumber, Value(0))),
                 PlainText("test de code "),
                 CRLF,
                 PlainText("if (a == b) "),
@@ -237,7 +243,7 @@ if (a == b) \{\
         let tokens = Lexer::scan(text);
         assert_eq!(
             tokens.unwrap(),
-            vec![OpeningBracket, ControlSymbol((Unknown(r"\red"), Value(255))), ControlSymbol((Unknown(r"\blue"), Value(255))), ClosingBracket]
+            vec![OpeningBracket, ControlSymbol((ColorRed, Value(255))), ControlSymbol((ColorBlue, Value(255))), ClosingBracket]
         );
     }
 
@@ -266,7 +272,7 @@ if (a == b) \{\
                 OpeningBracket,
                 ControlSymbol((Unknown("\\partightenfactor"), Value(0))),
                 ControlSymbol((FontSize, Value(24))),
-                ControlSymbol((Unknown("\\cf"), Value(0))),
+                ControlSymbol((ColorNumber, Value(0))),
                 PlainText("Font size 12,"),
                 ControlSymbol((FontNumber, Value(0))),
                 ControlSymbol((Bold, None)),

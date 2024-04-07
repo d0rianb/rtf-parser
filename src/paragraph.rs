@@ -1,7 +1,10 @@
 // Define the paragraph related structs and enums
 
+#[cfg(feature="serde_support")]
+use serde::{Deserialize, Serialize};
 use crate::tokens::ControlWord;
 
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, Clone, PartialEq, Hash)]
 pub struct Paragraph {
     pub alignment: Alignment,
@@ -11,6 +14,7 @@ pub struct Paragraph {
 }
 
 /// Alignement of a paragraph (left, right, center, justify)
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
 pub enum Alignment {
     #[default]
@@ -33,6 +37,7 @@ impl From<&ControlWord<'_>> for Alignment {
 }
 
 /// The vertical margin before / after a block of text
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, Clone, PartialEq, Hash)]
 pub struct Spacing {
     pub before: i32,
@@ -41,6 +46,7 @@ pub struct Spacing {
     pub line_multiplier: i32,
 }
 
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, Clone, PartialEq, Hash)]
 pub enum SpaceBetweenLine {
     Value(i32),
@@ -64,6 +70,7 @@ impl From<i32> for SpaceBetweenLine {
 }
 
 // This struct can not be an enum because left-indent and right-ident can both be defined at the same time
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, Clone, PartialEq, Hash)]
 pub struct Indentation {
     pub left: i32,

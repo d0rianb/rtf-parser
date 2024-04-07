@@ -3,8 +3,11 @@ use std::{fmt, mem};
 
 use derivative::Derivative;
 
+#[cfg(feature="serde_support")]
+use serde::{Deserialize, Serialize};
+
 use crate::document::RtfDocument;
-use crate::header::{CharacterSet, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
+use crate::header::{CharacterSet, Color, ColorRef, ColorTable, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
 use crate::paragraph::{Alignment, Paragraph, SpaceBetweenLine};
 use crate::tokens::{ControlWord, Property, Token};
 
@@ -18,6 +21,7 @@ macro_rules! header_control_word {
     };
 }
 
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct StyleBlock {
     pub painter: Painter,
@@ -25,9 +29,11 @@ pub struct StyleBlock {
     pub text: String,
 }
 
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
 #[derivative(Default)]
 pub struct Painter {
+    pub color_ref: ColorRef,
     pub font_ref: FontRef,
     #[derivative(Default(value = "12"))]
     pub font_size: u16,
@@ -46,6 +52,7 @@ pub enum ParserError {
     IgnorableDestinationParsingError,
     MalformedPainterStack,
     InvalidFontIdentifier(Property),
+    InvalidColorIdentifier(Property),
     NoMoreToken,
 }
 
@@ -59,6 +66,7 @@ impl fmt::Display for ParserError {
             ParserError::IgnorableDestinationParsingError => write!(f, "No ignorable destination should be left"),
             ParserError::MalformedPainterStack => write!(f, "Malformed painter stack : Unbalanced number of brackets"),
             ParserError::InvalidFontIdentifier(property) => write!(f, "Invalid font identifier : {:?}", property),
+            ParserError::InvalidColorIdentifier(property) => write!(f, "Invalid color identifier : {:?}", property),
             ParserError::NoMoreToken => write!(f, "No more token to parse"),
         };
         return Ok(());
@@ -120,11 +128,13 @@ impl<'a> Parser<'a> {
                     };
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
+                        ControlWord::ColorNumber        => current_painter.color_ref = property.get_value() as ColorRef,
                         ControlWord::FontNumber         => current_painter.font_ref = property.get_value() as FontRef,
                         ControlWord::FontSize           => current_painter.font_size = property.get_value() as u16,
                         ControlWord::Bold               => current_painter.bold = property.as_bool(),
                         ControlWord::Italic             => current_painter.italic = property.as_bool(),
                         ControlWord::Underline          => current_painter.underline = property.as_bool(),
+                        ControlWord::UnderlineNone      => current_painter.underline = false,
                         ControlWord::Superscript        => current_painter.superscript = property.as_bool(),
                         ControlWord::Subscript          => current_painter.subscript = property.as_bool(),
                         ControlWord::Smallcaps          => current_painter.smallcaps = property.as_bool(),
@@ -141,6 +151,11 @@ impl<'a> Parser<'a> {
                         ControlWord::SpaceAfter         => paragraph.spacing.after = property.get_value(),
                         ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
                         ControlWord::SpaceLineMul       => paragraph.spacing.line_multiplier = property.get_value(),
+                        ControlWord::Unicode            => {
+                            let unicode = property.get_value() as u16;
+                            let str = String::from_utf16(&vec![unicode]).unwrap();
+                            Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?
+                        }
                         // Others
                         _ => {}
                     };
@@ -246,6 +261,14 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
+                (Some(Token::OpeningBracket), Some(&header_control_word!(ColorTable, None))) => {
+                    let color_table_tokens = self.consume_tokens_until_matching_bracket();
+                    header.color_table = Self::parse_color_table(&color_table_tokens)?;
+                    // After the color table, check if next token is plain text without consuming it. If so, break
+                    if let Some(&Token::PlainText(_text)) = self.get_next_token() {
+                        break;
+                    }
+                }
                 (Some(Token::OpeningBracket), Some(&header_control_word!(StyleSheet, None))) => {
                     let stylesheet_tokens = self.consume_tokens_until_matching_bracket();
                     header.stylesheet = Self::parse_stylesheet(&stylesheet_tokens)?;
@@ -316,6 +339,34 @@ impl<'a> Parser<'a> {
                 Token::ClosingBracket => {
                     table.insert(current_key, current_font.clone());
                 } // Insert previous font
+                _ => {}
+            }
+        }
+        return Ok(table);
+    }
+
+    fn parse_color_table(color_table_tokens: &Vec<Token<'a>>) -> Result<ColorTable, ParserError> {
+        let Some(color_table_first_token) = color_table_tokens.get(0) else {
+            return Err(ParserError::NoMoreToken);
+        };
+        if color_table_first_token != &header_control_word!(ColorTable, None) {
+            return Err(ParserError::InvalidToken(format!("ParserError: {:?} is not a ColorTable token", color_table_first_token)));
+        }
+        let mut table = HashMap::new();
+        let mut current_key = 1;
+        let mut current_color = Color::default();
+        for token in color_table_tokens.iter() {
+            match token {
+                Token::ControlSymbol((control_word, property)) => match control_word {
+                    ControlWord::ColorRed => current_color.red = property.get_value() as u16,
+                    ControlWord::ColorGreen => current_color.green = property.get_value() as u16,
+                    ControlWord::ColorBlue => {
+                        current_color.blue = property.get_value() as u16;
+                        table.insert(current_key, current_color.clone());
+                        current_key += 1;
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         }
@@ -449,6 +500,9 @@ pub mod tests {
                         }
                     )
                 ]),
+                color_table: ColorTable::from([
+                    (1, Color { red: 255, green: 255, blue: 255 }),
+                ]),
                 ..RtfHeader::default()
             }
         );
@@ -514,7 +568,7 @@ pub mod tests {
 \f1\b0\fs21 \cf0 \
 \pard\pardeftab709\fi-432\ri-1\sb240\sa120\partightenfactor0
 \ls1\ilvl0
-\f0\b\fs36\u\cf2\plain Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \
+\f0\b\fs36\cf2\plain Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \
 \pard\pardeftab709\sl288\slmult1\sa225\qj\partightenfactor0
 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
@@ -556,6 +610,65 @@ pub mod tests {
         let rtf = r"{\rtf1{\fonttbl {\f0 Times;}}\f0\b\fs36\u\cf2\plain Plain text}";
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(document.body[0].painter, Painter::default());
+        let mut painter = Painter::default();
+        painter.bold = true;
+        painter.font_size = 36;
+        assert_eq!(document.body[0].painter, painter);
+    }
+
+    #[test]
+    fn parse_color_table() {
+        // cf0 is unset color
+        // cf1 is first color
+        // cf2 is second color
+        // etc...
+        let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
+            \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset134 PingFangSC-Regular;}
+            {\colortbl;\red255\green255\blue255;\red251\green2\blue7;\red114\green44\blue253;}
+            {\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;\cssrgb\c52799\c30710\c99498;}
+            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+            
+            \f0\fs24 \cf2 A
+            \f1 \cf3 B}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(document.header.color_table.get(&document.body[0].painter.color_ref).unwrap(), &Color { red: 251, green: 2, blue: 7 });
+    }
+
+    #[test]
+    fn parse_underline() {
+        // \\ul underline true
+        // \\ulnone underline false
+        let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
+            \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+            {\colortbl;\red255\green255\blue255;}
+            {\*\expandedcolortbl;;}
+            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+            
+            \f0\fs24 \cf0 \ul \ulc0 a\ulnone A}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].painter.underline, &true);
+        assert_eq!(&document.body[1].painter.underline, &false);
+    }
+
+    #[test]
+    fn parse_unicode() {
+        // start with \\uc0
+        // \u21834 => 啊
+        let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
+            \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+            {\colortbl;\red255\green255\blue255;}
+            {\*\expandedcolortbl;;}
+            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+            
+            \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
+            // \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].text, "啊 啊");
     }
 }

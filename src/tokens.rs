@@ -68,10 +68,13 @@ pub enum ControlWord<'a> {
     Rtf,
     Ansi,
 
+    Unicode,
+
     FontTable,
     FontCharset,
     FontNumber,
     FontSize, // Expressed in half point
+    ColorNumber,
 
     ColorTable,
     FileTable,
@@ -80,6 +83,7 @@ pub enum ControlWord<'a> {
     Italic,
     Bold,
     Underline,
+    UnderlineNone,
     Superscript, // 5th
     Subscript,   // H20
     Smallcaps,
@@ -105,6 +109,10 @@ pub enum ControlWord<'a> {
     SpaceAfter,
     SpaceBetweenLine,
     SpaceLineMul, // Line spacing multiple. Indicates that the current line spacing is a multiple of "Single" line spacing. This control word can follow only the \sl control word and works in conjunction with it.
+
+    ColorRed,
+    ColorGreen,
+    ColorBlue,
 
     Unknown(&'a str),
 }
@@ -145,18 +153,20 @@ impl<'a> ControlWord<'a> {
             r"\ansi"          => ControlWord::Ansi,
             // Header
             r"\fonttbl"       => ControlWord::FontTable,
-            r"\colortabl"     => ControlWord::ColorTable,
-            r"\filetbl"        => ControlWord::FileTable,
+            r"\colortbl"      => ControlWord::ColorTable,
+            r"\filetbl"       => ControlWord::FileTable,
             r"\stylesheet"    => ControlWord::StyleSheet,
             // Font
             r"\fcharset"      => ControlWord::FontCharset,
             r"\f"             => ControlWord::FontNumber,
             r"\fs"            => ControlWord::FontSize,
+            r"\cf"            => ControlWord::ColorNumber,
             // Format
             r"\i"             => ControlWord::Italic,
             r"\b"             => ControlWord::Bold,
-            r"\u"             => ControlWord::Underline,
+            r"\u"             => ControlWord::Unicode,
             r"\ul"            => ControlWord::Underline,
+            r"\ulnone"        => ControlWord::UnderlineNone,
             r"\super"         => ControlWord::Superscript,
             r"\sub"           => ControlWord::Subscript,
             r"\scaps"         => ControlWord::Smallcaps,
@@ -182,6 +192,9 @@ impl<'a> ControlWord<'a> {
             r"\sa"            => ControlWord::SpaceAfter,
             r"\sl"            => ControlWord::SpaceBetweenLine,
             r"\slmul"         => ControlWord::SpaceLineMul,
+            r"\red"           => ControlWord::ColorRed,
+            r"\green"         => ControlWord::ColorGreen,
+            r"\blue"          => ControlWord::ColorBlue,
             // Unknown
             _                 => ControlWord::Unknown(prefix),
         };
