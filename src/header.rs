@@ -17,13 +17,7 @@ pub type StyleRef = u16;
 pub type StyleSheet = HashMap<StyleRef, Style>;
 
 /// Style for the StyleSheet
-#[cfg(feature="serde_support")]
-#[derive(Hash, Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Style {
-    painter: Painter,
-    paragraph: Paragraph,
-}
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Hash, Default, Debug, Clone, PartialEq)]
 pub struct Style {
     painter: Painter,
@@ -31,15 +25,7 @@ pub struct Style {
 }
 
 /// Information about the document, including references to fonts & styles
-#[cfg(feature="serde_support")]
-#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct RtfHeader {
-    pub character_set: CharacterSet,
-    pub font_table: FontTable,
-    pub color_table: ColorTable,
-    pub stylesheet: StyleSheet,
-}
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct RtfHeader {
     pub character_set: CharacterSet,
@@ -48,14 +34,7 @@ pub struct RtfHeader {
     pub stylesheet: StyleSheet,
 }
 
-#[cfg(feature="serde_support")]
-#[derive(Hash, Default, Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct Font {
-    pub name: String,
-    pub character_set: u8,
-    pub font_family: FontFamily,
-}
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
 pub struct Font {
     pub name: String,
@@ -63,14 +42,7 @@ pub struct Font {
     pub font_family: FontFamily,
 }
 
-#[cfg(feature="serde_support")]
-#[derive(Hash, Default, Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct Color {
-    pub red: u16,
-    pub green: u16,
-    pub blue: u16,
-}
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
 pub struct Color {
     pub red: u16,
@@ -78,18 +50,7 @@ pub struct Color {
     pub blue: u16,
 }
 
-#[cfg(feature="serde_support")]
-#[allow(dead_code)]
-#[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
-pub enum CharacterSet {
-    #[default]
-    Ansi,
-    Mac,
-    Pc,
-    Pca,
-    Ansicpg(u16),
-}
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Default, Clone)]
 pub enum CharacterSet {
@@ -111,21 +72,7 @@ impl CharacterSet {
     }
 }
 
-#[cfg(feature="serde_support")]
-#[allow(dead_code)]
-#[derive(Debug, PartialEq, Hash, Clone, Default, Deserialize, Serialize)]
-pub enum FontFamily {
-    #[default]
-    Nil,
-    Roman,
-    Swiss,
-    Modern,
-    Script,
-    Decor,
-    Tech,
-    Bidi,
-}
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Hash, Clone, Default)]
 pub enum FontFamily {

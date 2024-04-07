@@ -21,15 +21,7 @@ macro_rules! header_control_word {
     };
 }
 
-#[cfg(feature="serde_support")]
-#[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
-pub struct StyleBlock {
-    pub painter: Painter,
-    pub paragraph: Paragraph,
-    pub text: String,
-}
-
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct StyleBlock {
     pub painter: Painter,
@@ -37,23 +29,7 @@ pub struct StyleBlock {
     pub text: String,
 }
 
-#[cfg(feature="serde_support")]
-#[derive(Derivative, Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
-#[derivative(Default)]
-pub struct Painter {
-    pub color_ref: ColorRef,
-    pub font_ref: FontRef,
-    #[derivative(Default(value = "12"))]
-    pub font_size: u16,
-    pub bold: bool,
-    pub italic: bool,
-    pub underline: bool,
-    pub superscript: bool,
-    pub subscript: bool,
-    pub smallcaps: bool,
-    pub strike: bool,
-}
-#[cfg(not(feature="serde_support"))]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
 #[derivative(Default)]
 pub struct Painter {
@@ -604,7 +580,7 @@ pub mod tests {
 \f1\b0\fs21 \cf0 \
 \pard\pardeftab709\fi-432\ri-1\sb240\sa120\partightenfactor0
 \ls1\ilvl0
-\f0\b\fs36\u\cf2\plain Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \
+\f0\b\fs36\cf2\plain Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio. \
 \pard\pardeftab709\sl288\slmult1\sa225\qj\partightenfactor0
 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
