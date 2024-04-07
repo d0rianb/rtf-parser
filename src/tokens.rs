@@ -110,6 +110,10 @@ pub enum ControlWord<'a> {
     SpaceBetweenLine,
     SpaceLineMul, // Line spacing multiple. Indicates that the current line spacing is a multiple of "Single" line spacing. This control word can follow only the \sl control word and works in conjunction with it.
 
+    ColorRed,
+    ColorGreen,
+    ColorBlue,
+
     Unknown(&'a str),
 }
 
@@ -188,6 +192,9 @@ impl<'a> ControlWord<'a> {
             r"\sa"            => ControlWord::SpaceAfter,
             r"\sl"            => ControlWord::SpaceBetweenLine,
             r"\slmul"         => ControlWord::SpaceLineMul,
+            r"\red"           => ControlWord::ColorRed,
+            r"\green"         => ControlWord::ColorGreen,
+            r"\blue"          => ControlWord::ColorBlue,
             // Unknown
             _                 => ControlWord::Unknown(prefix),
         };

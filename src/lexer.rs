@@ -153,9 +153,8 @@ impl Lexer {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::header::Color;
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, ColorNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, FontNumber, ColorNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, ColorRed, ColorGreen, ColorBlue, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 
@@ -244,7 +243,7 @@ if (a == b) \{\
         let tokens = Lexer::scan(text);
         assert_eq!(
             tokens.unwrap(),
-            vec![OpeningBracket, ControlSymbol((Unknown(r"\red"), Value(255))), ControlSymbol((Unknown(r"\blue"), Value(255))), ClosingBracket]
+            vec![OpeningBracket, ControlSymbol((ColorRed, Value(255))), ControlSymbol((ColorBlue, Value(255))), ClosingBracket]
         );
     }
 

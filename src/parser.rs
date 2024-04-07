@@ -358,24 +358,12 @@ impl<'a> Parser<'a> {
         for token in color_table_tokens.iter() {
             match token {
                 Token::ControlSymbol((control_word, property)) => match control_word {
-                    ControlWord::Unknown(name) => {
-                        if let Property::Value(key) = property {
-                            match *name {
-                                "\\red" => {
-                                    current_color.red = *key as u16;
-                                }
-                                "\\green" => {
-                                    current_color.green = *key as u16;
-                                }
-                                "\\blue" => {
-                                    // \\blue is end of this color
-                                    current_color.blue = *key as u16;
-                                    table.insert(current_key, current_color.clone());
-                                    current_key += 1;
-                                }
-                                _ => {}
-                            }
-                        }
+                    ControlWord::ColorRed => current_color.red = property.get_value() as u16,
+                    ControlWord::ColorGreen => current_color.green = property.get_value() as u16,
+                    ControlWord::ColorBlue => {
+                        current_color.blue = property.get_value() as u16;
+                        table.insert(current_key, current_color.clone());
+                        current_key += 1;
                     }
                     _ => {}
                 },
