@@ -1,26 +1,37 @@
 # rtf-parser
-A Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies.
+[![Crates.io](https://img.shields.io/crates/v/rtf-parser.svg?style=flat-square&color=orange)](https://crates.io/crates/rtf-parser)
+![Crates.io License](https://img.shields.io/crates/l/rtf-parser?style=flat-square)
+[![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
+[![docs.rs](https://img.shields.io/docsrs/rtf-parser?style=flat-square)](https://docs.rs/rtf-parser)
 
+A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies.
+The official documentation is available at [docs.rs/rtf-parser](https://docs.rs/rtf-parser).
+
+## Installation
+This library can be installed using cargo with the CLI :  
+```bash
+ cargo add rtf-parser
+ ```
+Or adding `rtf-parser = "<last-version>"` under **[dependencies]** in your `Cargo.toml`.
+
+## Design
 The library is split into 2 main components:
 1. The lexer
 2. The parser
 
-The lexer scan the document and return a `Vec<Token>` which represent the RTF file in a code-understandable manner.
-To use it : 
+The lexer scans the document and returns a `Vec<Token>` which represent the RTF file in a code-understandable manner.
+These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.
 ```rust
 use rtf_parser::lexer::Lexer;
 use rtf_parser::tokens::Token;
-
-let tokens: Vec<Token> = Lexer::scan("<rtf>")?;
-```
-
-These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.
-```rust
 use rtf_parser::parser::Parser;
 use rtf_parser::document::RtfDocument;
 
-let parser = Parser::new(tokens);
-let doc: RtfDocument = parser.parse()?;
+fn main() -> Result<(), Box<dyn Error>> {
+    let tokens: Vec<Token> = Lexer::scan("<rtf>")?;
+    let parser = Parser::new(tokens);
+    let doc: RtfDocument = parser.parse()?;    
+}
 ```
 
 An `RtfDocument` is composed with : 
@@ -53,7 +64,7 @@ pub struct Paragraph {
     pub tab_width: i32,
 }
 ```
-It defined the way a blovk is aligned, what spacing it uses, etc...
+It defined the way a block is aligned, what spacing it uses, etc...
 
 You also can extract the text without any formatting information, with the `to_text()` method of the `RtfDocument` struct.
 
@@ -81,6 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         doc.header,
         RtfHeader {
             character_set: Ansi,
+            color_table: ColorTable::Default(),
             font_table: FontTable::from([
                 (0, Font { name: "Helvetica", character_set: 0, font_family: Swiss })
             ])
@@ -124,4 +136,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     return Ok(());
 }
 ```
+
+## Benchmark
+For now, there is no comparable crates to [`rtf-parser`](https://crates.io/crates/rtf-parser).  
+However, the `rtf-grimoire` crate provide a similar *Lexer*. Here is a quick benchmark of the lexing and parsing of a 500kB rtf docuement.
+
+| Crate                                                                 | Version | Duration |
+|-----------------------------------------------------------------------|:-------:|---------:|
+| [`rtf-parser`](https://crates.io/crates/rtf-parser)                   | v0.2.1  |  _30 ms_ |
+| [`rtf-grimoire`](https://crates.io/crates/rtf-grimoire) (only lexing) | v0.2.1  | _123 ms_ |
+
+*This benchmark has been made on an Intel MacBook Pro*.  
+For the `rtf-parser`, most of the compute time (_65 %_) is spent by the lexing process. There is still lot of room for improvement.  
+
+
+
 
