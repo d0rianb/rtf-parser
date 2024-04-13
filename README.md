@@ -34,6 +34,25 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
+or in a more concise way :
+
+```rust 
+use rtf_parser::document::RtfDocument;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let doc: RtfDocument = RtfDocument::try_from("<rtf>")?;    
+}
+```
+
+The `RtfDocument` struct implement the `TryFrom` trait for : 
+- `&str`
+- `String`
+- `&mut std::fs::File`  
+
+and a `from_filepath` constructor that handle the i/o internally. 
+
+The error returned can be a `LexerError` or a `ParserError` depending on the phase wich failed.   
+
 An `RtfDocument` is composed with : 
 - the **header**, containing among others the font table, the color table and the encoding.
 - the **body**, which is a `Vec<StyledBlock>`
@@ -143,7 +162,7 @@ However, the `rtf-grimoire` crate provide a similar *Lexer*. Here is a quick ben
 
 | Crate                                                                 | Version | Duration |
 |-----------------------------------------------------------------------|:-------:|---------:|
-| [`rtf-parser`](https://crates.io/crates/rtf-parser)                   | v0.2.1  |  _30 ms_ |
+| [`rtf-parser`](https://crates.io/crates/rtf-parser)                   | v0.2.2  |  _30 ms_ |
 | [`rtf-grimoire`](https://crates.io/crates/rtf-grimoire) (only lexing) | v0.2.1  | _123 ms_ |
 
 *This benchmark has been made on an Intel MacBook Pro*.  

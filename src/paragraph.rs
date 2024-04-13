@@ -1,12 +1,12 @@
-// Define the paragraph related structs and enums
+/// Define the paragraph related structs and enums
 
 #[cfg(feature = "serde_support")]
 use serde::{Deserialize, Serialize};
 
 use crate::tokens::ControlWord;
 
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, Clone, PartialEq, Hash)]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 pub struct Paragraph {
     pub alignment: Alignment,
     pub spacing: Spacing,
@@ -15,8 +15,8 @@ pub struct Paragraph {
 }
 
 /// Alignement of a paragraph (left, right, center, justify)
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 pub enum Alignment {
     #[default]
     LeftAligned, // \ql
@@ -38,8 +38,8 @@ impl From<&ControlWord<'_>> for Alignment {
 }
 
 /// The vertical margin before / after a block of text
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, Clone, PartialEq, Hash)]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 pub struct Spacing {
     pub before: i32,
     pub after: i32,
@@ -47,8 +47,8 @@ pub struct Spacing {
     pub line_multiplier: i32,
 }
 
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, Clone, PartialEq, Hash)]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 pub enum SpaceBetweenLine {
     Value(i32),
     #[default]
@@ -56,7 +56,7 @@ pub enum SpaceBetweenLine {
     Invalid,
 }
 
-// Space between lines.
+/// Space between lines.
 // If this control word is missing or if \sl1000 is used, the line spacing is automatically determined by the tallest character in the line;
 // if N is a positive value, this size is used only if it is taller than the tallest character (otherwise, the tallest character is used);
 // if N is a negative value, the absolute value of N is used, even if it is shorter than the tallest character.
@@ -71,8 +71,8 @@ impl From<i32> for SpaceBetweenLine {
 }
 
 // This struct can not be an enum because left-indent and right-ident can both be defined at the same time
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, Clone, PartialEq, Hash)]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 pub struct Indentation {
     pub left: i32,
     pub right: i32,

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::{fmt, mem};
 
 use derivative::Derivative;
-
 #[cfg(feature = "serde_support")]
 use serde::{Deserialize, Serialize};
 
@@ -21,16 +20,16 @@ macro_rules! header_control_word {
     };
 }
 
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Clone)]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 pub struct StyleBlock {
     pub painter: Painter,
     pub paragraph: Paragraph,
     pub text: String,
 }
 
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
+#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
 #[derivative(Default)]
 pub struct Painter {
     pub color_ref: ColorRef,
