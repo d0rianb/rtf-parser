@@ -105,9 +105,9 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-        self.parse_ignore_groups(); // delete the ignore groups
+        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
-        // Parse Body
+        // Parse the body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
         let mut paragraph = Paragraph::default();
         let mut it = self.tokens.iter();
@@ -246,7 +246,7 @@ impl<'a> Parser<'a> {
         }
         return ret;
     }
-    
+
     // Consume all the tokens inside a group ({ ... }) and returns the includes ones
     fn consume_group(&mut self) -> Vec<Token<'a>> {
         // TODO: check the the token at cursor is indeed an OpeningBracket
@@ -258,8 +258,24 @@ impl<'a> Parser<'a> {
     fn parse_header(&mut self) -> Result<RtfHeader, ParserError> {
         self.cursor = 0; // Reset the cursor
         let mut header = RtfHeader::default();
-        while let (Some(token), Some(next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
+        while let (Some(token), Some(mut next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
+            
+            // Manage the case where there is CRLF between { and control_word
+            // {\n /*/ignoregroup }
+            let mut i = 0;
+            while *next_token == Token::CRLF {
+                if let Some(next_token_not_crlf) = self.get_token_at(self.cursor + 1 + i) {
+                    next_token = next_token_not_crlf;
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
             match (token, next_token) {
+                (Token::OpeningBracket, Token::IgnorableDestination) => {
+                    let ignore_group_tokens = self.consume_group();
+                    Self::parse_ignore_groups(&ignore_group_tokens);
+                }
                 (Token::OpeningBracket, header_control_word!(FontTable, None)) => {
                     let font_table_tokens = self.consume_group();
                     header.font_table = Self::parse_font_table(&font_table_tokens)?;
@@ -353,34 +369,13 @@ impl<'a> Parser<'a> {
         return Ok(table);
     }
 
-    fn parse_stylesheet(stylesheet_tokens: &Vec<Token<'a>>) -> Result<StyleSheet, ParserError> {
-        // TODO
+    fn parse_stylesheet(_stylesheet_tokens: &Vec<Token<'a>>) -> Result<StyleSheet, ParserError> {
+        // TODO : parse the stylesheet
         return Ok(StyleSheet::from([]));
     }
 
-    // Traverse all the tokens and consume the ignore groups
-    fn parse_ignore_groups(&mut self) {
-        self.cursor = 0; // Reset the cursor
-        while let (Some(token), Some(mut next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
-            let mut i = 0;
-            // Manage the case where there is CRLF between { and ignore_group
-            // {\n /*/ignoregroup }
-            while *next_token == Token::CRLF {
-                if let Some(next_token_not_crlf) = self.get_token_at(self.cursor + 1 + i) {
-                    next_token = next_token_not_crlf;
-                    i += 1;
-                } else {
-                    break;
-                }
-            }
-            match (token, next_token) {
-                (Token::OpeningBracket, Token::IgnorableDestination) => {
-                    self.consume_token_at(self.cursor); // Consume the opening bracket
-                    self.consume_tokens_until_matching_bracket();
-                }
-                _ => { self.cursor += 1; }
-            }
-        }
+    fn parse_ignore_groups(_tokens: &Vec<Token<'a>>) {
+        // Do nothing for now
     }
 }
 
@@ -647,7 +642,7 @@ pub mod tests {
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].text, "啊 啊");
     }
-    
+
     #[test]
     fn body_starts_with_a_group() {
         let rtf = r"{\rtf1\ansi\deff0{\fonttbl {\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset2 Symbol;}}{\colortbl ;}{\pard \u21435  \sb70\par}}";
