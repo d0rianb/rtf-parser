@@ -5,6 +5,7 @@
 [![docs.rs](https://img.shields.io/docsrs/rtf-parser?style=flat-square)](https://docs.rs/rtf-parser)
 
 A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies.
+  
 The official documentation is available at [docs.rs/rtf-parser](https://docs.rs/rtf-parser).
 
 ## Installation
@@ -51,7 +52,8 @@ The `RtfDocument` struct implement the `TryFrom` trait for :
 
 and a `from_filepath` constructor that handle the i/o internally. 
 
-The error returned can be a `LexerError` or a `ParserError` depending on the phase wich failed.   
+The error returned can be a `LexerError` or a `ParserError` depending on the phase wich failed.  
+
 
 An `RtfDocument` is composed with : 
 - the **header**, containing among others the font table, the color table and the encoding.
@@ -166,6 +168,7 @@ However, the `rtf-grimoire` crate provide a similar *Lexer*. Here is a quick ben
 | [`rtf-grimoire`](https://crates.io/crates/rtf-grimoire) (only lexing) | v0.2.1  | _123 ms_ |
 
 *This benchmark has been made on an Intel MacBook Pro*.  
+
 For the `rtf-parser`, most of the compute time (_65 %_) is spent by the lexing process. There is still lot of room for improvement.  
 
 
