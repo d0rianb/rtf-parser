@@ -277,7 +277,7 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
-                (Some(Token::OpeningBracket), Some(header_control_word!(Pard))) => {
+                (Some(Token::OpeningBracket), Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par))) => {
                     self.tokens.insert(self.cursor, Token::OpeningBracket);
                     break;
                 }
