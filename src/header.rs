@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[cfg(feature = "serde_support")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::paragraph::Paragraph;
@@ -24,7 +24,7 @@ pub type StyleSheet = HashMap<StyleRef, Style>;
 
 /// Style for the StyleSheet
 #[derive(Hash, Default, Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Style {
     /// The style attributes
     painter: Painter,
@@ -34,7 +34,7 @@ pub struct Style {
 
 /// Information about the document, including references to fonts & styles
 #[derive(Default, Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct RtfHeader {
     pub character_set: CharacterSet,
     pub font_table: FontTable,
@@ -43,7 +43,7 @@ pub struct RtfHeader {
 }
 
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Font {
     pub name: String,
     pub character_set: u8,
@@ -51,7 +51,7 @@ pub struct Font {
 }
 
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Color {
     pub red: u8,
     pub green: u8,
@@ -60,7 +60,7 @@ pub struct Color {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Default, Clone, Hash)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum CharacterSet {
     #[default]
     Ansi,
@@ -81,7 +81,7 @@ impl CharacterSet {
 }
 
 #[allow(dead_code)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Hash, Clone, Default)]
 pub enum FontFamily {
     #[default]

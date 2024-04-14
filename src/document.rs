@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs;
 use std::io::Read;
 
-#[cfg(feature = "serde_support")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::header::RtfHeader;
@@ -10,7 +10,7 @@ use crate::lexer::Lexer;
 use crate::parser::{Parser, StyleBlock};
 
 #[derive(Debug, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct RtfDocument {
     pub header: RtfHeader,
     pub body: Vec<StyleBlock>,

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::{fmt, mem};
 
 use derivative::Derivative;
-#[cfg(feature = "serde_support")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::document::RtfDocument;
@@ -21,7 +21,7 @@ macro_rules! header_control_word {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct StyleBlock {
     pub painter: Painter,
     pub paragraph: Paragraph,
@@ -29,7 +29,7 @@ pub struct StyleBlock {
 }
 
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
-#[cfg_attr(feature = "serde_support", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derivative(Default)]
 pub struct Painter {
     pub color_ref: ColorRef,
