@@ -277,6 +277,10 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
+                (Some(Token::OpeningBracket), Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par))) => {
+                    self.tokens.insert(self.cursor, Token::OpeningBracket);
+                    break;
+                }
                 // Break on par, pard, sectd, or plain - We no longer are in the header
                 (Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par)), _) => break,
                 // Break if it declares a font after the font table --> no more in the header
@@ -664,9 +668,16 @@ pub mod tests {
             \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
             
             \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
-        // \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].text, "啊 啊");
+    }
+
+    #[test]
+    fn parse_opening_bracket_and_pard() {
+        let rtf = r#"{\rtf1\ansi\deff0{\fonttbl {\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset2 Symbol;}}{\colortbl ;}{\pard a\sb70\par}}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].text, "a");
     }
 }
