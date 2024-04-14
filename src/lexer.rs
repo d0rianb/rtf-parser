@@ -154,7 +154,7 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, ColorBlue, ColorGreen, ColorNumber, ColorRed, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, ColorBlue, ColorNumber, ColorRed, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 
