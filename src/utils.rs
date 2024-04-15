@@ -9,8 +9,15 @@ impl StrUtils for str {
     // ex : split_first_whitespace("\b I'm a bold string") -> ("\b", "I'm a bold string")
     fn split_first_whitespace(&self) -> (&str, &str) {
         let mut first_whitespace_index = 0;
-        let mut it = self.chars();
-        while let Some(c) = it.next() {
+        
+        let len = self.len();
+        let bytes = self.as_bytes();
+        let mut i = 0;
+        // Faster than an iterator
+        while i < len {
+            let c = bytes[i] as char;
+            i += 1;
+            
             if c.is_whitespace() {
                 break;
             } else {

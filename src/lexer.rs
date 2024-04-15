@@ -42,12 +42,20 @@ pub struct Lexer;
 impl Lexer {
     pub fn scan(src: &str) -> Result<Vec<Token>, LexerError> {
         let src = src.trim(); // Sanitize src : Trim the leading whitespaces
-        let mut it = src.chars();
+
         let mut tokens: Vec<Token> = vec![];
         let mut slice_start_index = 0;
         let mut current_index = 0;
         let mut previous_char = ' ';
-        while let Some(c) = it.next() {
+
+        // This is faster than using an iterator
+        let len = src.len();
+        let bytes = src.as_bytes();
+        let mut i = 0;
+        while i < len {
+            let c = bytes[i] as char;
+            i += 1;
+
             match c {
                 // TODO: Handle char over code 127 for escaped chars
                 // Handle Escaped chars : "\" + any charcode below 127
