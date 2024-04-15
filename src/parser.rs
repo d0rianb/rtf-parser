@@ -68,19 +68,24 @@ impl fmt::Display for ParserError {
             ParserError::InvalidFontIdentifier(property) => write!(f, "Invalid font identifier : {:?}", property),
             ParserError::InvalidColorIdentifier(property) => write!(f, "Invalid color identifier : {:?}", property),
             ParserError::NoMoreToken => write!(f, "No more token to parse"),
-            ParserError::ValueCastError(T) => write!(f, "Unable to cast i32 to {T}"),
+            ParserError::ValueCastError(_type) => write!(f, "Unable to cast i32 to {_type}"),
         };
     }
 }
 
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
+    parsed_item : Vec<bool>,
     cursor: usize,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: Vec<Token<'a>>) -> Self {
-        return Self { tokens, cursor: 0 };
+        return Self {
+            parsed_item: vec![false; tokens.len()],
+            tokens,
+            cursor: 0
+        };
     }
 
     fn check_document_validity(&self) -> Result<(), ParserError> {
@@ -110,8 +115,18 @@ impl<'a> Parser<'a> {
         // Parse the body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
         let mut paragraph = Paragraph::default();
-        let mut it = self.tokens.iter();
-        while let Some(token) = it.next() {
+        let len = self.tokens.len();
+        let mut i = 0;
+
+        while i < len {
+            if self.parsed_item[i] {
+                // The item already has been parsed
+                i += 1;
+                continue;
+            }
+            let token = &self.tokens[i];
+            i += 1;
+
             match token {
                 Token::OpeningBracket => {
                     painter_stack.push(Painter::default());
@@ -204,11 +219,15 @@ impl<'a> Parser<'a> {
         return self.get_token_at(self.cursor);
     }
 
+    #[inline]
     fn consume_token_at(&mut self, index: usize) -> Option<Token<'a>> {
-        if self.tokens.is_empty() {
+        if self.tokens.is_empty() || index >= self.tokens.len() {
             return None;
         }
-        Some(self.tokens.remove(index))
+        // PERF : vec.remove can require reallocation unlike this method
+        self.cursor += 1;
+        self.parsed_item[index] = true;
+        return Some(mem::replace(&mut self.tokens[index], Token::IgnorableDestination)); // temp
     }
 
     fn consume_next_token(&mut self) -> Option<Token<'a>> {
@@ -216,9 +235,9 @@ impl<'a> Parser<'a> {
     }
 
     // Consume token from cursor to <reference-token>
-    fn _consume_tokens_until(&mut self, reference_token: Token<'a>) -> Vec<Token<'a>> {
+    fn _consume_tokens_until(&mut self, reference_token: &Token<'a>) -> Vec<Token<'a>> {
         let mut ret = vec![];
-        let token_type_id = mem::discriminant(&reference_token);
+        let token_type_id = mem::discriminant(reference_token);
         while let Some(token) = self.consume_next_token() {
             let type_id = mem::discriminant(&token);
             ret.push(token);
@@ -259,7 +278,6 @@ impl<'a> Parser<'a> {
         self.cursor = 0; // Reset the cursor
         let mut header = RtfHeader::default();
         while let (Some(token), Some(mut next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
-            
             // Manage the case where there is CRLF between { and control_word
             // {\n /*/ignoregroup }
             let mut i = 0;
