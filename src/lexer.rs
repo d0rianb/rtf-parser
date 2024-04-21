@@ -124,7 +124,8 @@ impl Lexer {
                     recursive_tokenize!(tail, ret);
 
                     // \u1234 \u1234 is ok, but \u1234  \u1234 is lost a space, \u1234   \u1234 lost two spaces, and so on
-                    if control_word.0 == ControlWord::Unicode && tail.len() > 0 {
+                    // \u1234  1 -> No need to walk in here, it will enter plain text
+                    if control_word.0 == ControlWord::Unicode && tail.len() > 0 && tail.trim() == "" {
                         ret.push(Token::PlainText(tail));
                     }
                     return Ok(ret);

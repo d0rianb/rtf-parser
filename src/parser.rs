@@ -667,10 +667,10 @@ pub mod tests {
             \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
             \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
             
-            \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
+            \f0\fs24 \cf0 \uc0\u21834  1\u21834   1 2 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(&document.body[0].text, "啊 啊");
+        assert_eq!(&document.body[0].text, "啊 1啊  1 2 ");
     }
 
     #[test]
