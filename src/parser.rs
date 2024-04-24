@@ -153,8 +153,22 @@ impl<'a> Parser<'a> {
                         ControlWord::SpaceLineMul       => paragraph.spacing.line_multiplier = property.get_value(),
                         ControlWord::Unicode            => {
                             let unicode = property.get_value_as::<u16>()?;
-                            let str = String::from_utf16(&vec![unicode]).unwrap();
-                            Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?
+                            if let Ok(str) = String::from_utf16(&vec![unicode]) {
+                                Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?
+                            } else {
+                                // FromUtf16Error, may be two-character string
+                                if let Some(next_token) = it.clone().next() {
+                                    if let Token::ControlSymbol((next_control_word, next_property)) = next_token {
+                                        if let ControlWord::Unicode = next_control_word {
+                                            let next_unicode = next_property.get_value_as::<u16>()?;
+                                            if let Ok(str) = String::from_utf16(&vec![unicode, next_unicode]) {
+                                                Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?;
+                                                it.next();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         // Others
                         _ => {}
@@ -679,5 +693,21 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].text, "a");
+    }
+
+    #[test]
+    fn parse_two_character_string() {
+        let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
+            \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 Helvetica-Oblique\f2\fswiss\fcharset0 Helvetica-Bold;\f3\fswiss\fcharset0 Helvetica-BoldOblique;
+            }
+            {\colortbl;\red255\green255\blue255;\red251\green2\blue7;\red0\green0\blue0;}
+            {\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;\cssrgb\c0\c0\c0;}
+            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+            \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+            
+            \f0 a\u55357 \u56447 1 \u21834}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].text, "a👿1 啊");
     }
 }
