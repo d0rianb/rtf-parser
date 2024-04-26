@@ -13,6 +13,11 @@ exclude = ["*.rtf", ".idea"]
 lto = true
 opt-level = 3
 
+[profile.profiling]
+inherits = "dev"
+opt-level = 0
+debug = true
+
 [dependencies]
 derivative = "2.2.0"
 serde = { version = "1.0", optional = true, features = ["derive"] }

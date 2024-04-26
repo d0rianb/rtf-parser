@@ -16,6 +16,7 @@ pub enum Token<'a> {
     CRLF,                 // Line-return \n
     IgnorableDestination, // \*\ <destination-name>
     ControlSymbol(ControlSymbol<'a>),
+    Empty                 // Used by the parser for optimization
 }
 
 #[allow(dead_code)]
@@ -30,6 +31,7 @@ impl<'a> fmt::Debug for Token<'a> {
             Token::CRLF                   => write!(f, "CRLF"),
             Token::IgnorableDestination   => write!(f, "IgnorableDestination"),
             Token::ControlSymbol(symbol)  => write!(f, "ControlSymbol : {:?}", symbol),
+            Token::Empty                  => write!(f, "Empty"),
         };
     }
 }
