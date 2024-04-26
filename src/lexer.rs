@@ -67,9 +67,7 @@ impl Lexer {
                         let slice = &src[slice_start_index..current_index];
                         // Get the corresponding token(s)
                         let slice_tokens = Self::tokenize(slice)?;
-                        for slice_token in slice_tokens {
-                            tokens.push(slice_token);
-                        }
+                        tokens.extend_from_slice(&slice_tokens.as_slice());
                         slice_start_index = current_index;
                     }
                 }
@@ -162,7 +160,7 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, ColorBlue, ColorGreen, ColorNumber, ColorRed, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, ColorBlue, ColorNumber, ColorRed, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
 

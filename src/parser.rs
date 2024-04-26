@@ -87,6 +87,11 @@ impl<'a> Parser<'a> {
             cursor: 0
         };
     }
+    
+    pub fn get_tokens(&self) -> Vec<&Token> {
+        // It ignores the empty tokens, that replaced already parsed tokens istead of deleting them for performance reasons
+        return self.tokens.iter().filter(|t| *t != &Token::Empty).collect();
+    }
 
     fn check_document_validity(&self) -> Result<(), ParserError> {
         // Check the document boundaries
@@ -184,6 +189,7 @@ impl<'a> Parser<'a> {
                 Token::IgnorableDestination => {
                     return Err(ParserError::IgnorableDestinationParsingError);
                 }
+                Token::Empty => panic!("Try to parse an empty token, this should not happen")
             };
         }
         return Ok(document);
@@ -227,7 +233,7 @@ impl<'a> Parser<'a> {
         // PERF : vec.remove can require reallocation unlike this method
         self.cursor += 1;
         self.parsed_item[index] = true;
-        return Some(mem::replace(&mut self.tokens[index], Token::IgnorableDestination)); // temp
+        return Some(mem::replace(&mut self.tokens[index], Token::Empty));
     }
 
     fn consume_next_token(&mut self) -> Option<Token<'a>> {
@@ -503,7 +509,7 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let mut parser = Parser::new(tokens);
         let document = parser.parse().unwrap();
-        assert_eq!(parser.tokens, vec![]); // Should have consumed all the tokens
+        assert_eq!(parser.get_tokens(), Vec::<&Token>::new()); // Should have consumed all the tokens
         assert_eq!(document.header, RtfHeader::default());
     }
 
@@ -515,7 +521,7 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let mut parser = Parser::new(tokens);
         let document = parser.parse().unwrap();
-        assert_eq!(parser.tokens, vec![]); // Should have consumed all the tokens
+        assert_eq!(parser.get_tokens(), Vec::<&Token>::new()); // Should have consumed all the tokens
         assert_eq!(document.header, RtfHeader::default());
     }
 
