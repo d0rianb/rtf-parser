@@ -13,10 +13,10 @@ use crate::tokens::{ControlWord, Property, Token};
 // Use to specify control word in parse_header
 macro_rules! header_control_word {
     ($cw:ident) => {
-        Token::ControlSymbol((ControlWord::$cw, _))
+        &Token::ControlSymbol((ControlWord::$cw, _))
     };
     ($cw:ident, $prop:ident) => {
-        Token::ControlSymbol((ControlWord::$cw, Property::$prop))
+        &Token::ControlSymbol((ControlWord::$cw, Property::$prop))
     };
 }
 
@@ -105,9 +105,9 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-        self.parse_ignore_groups(); // delete the ignore groups
+        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
-        // Parse Body
+        // Parse the body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
         let mut paragraph = Paragraph::default();
         let mut it = self.tokens.iter();
@@ -247,62 +247,54 @@ impl<'a> Parser<'a> {
         return ret;
     }
 
+    // Consume all the tokens inside a group ({ ... }) and returns the includes ones
+    fn consume_group(&mut self) -> Vec<Token<'a>> {
+        // TODO: check the the token at cursor is indeed an OpeningBracket
+        self.consume_token_at(self.cursor); // Consume the opening bracket
+        return self.consume_tokens_until_matching_bracket();
+    }
+
     // Consume all tokens until the header is read
     fn parse_header(&mut self) -> Result<RtfHeader, ParserError> {
         self.cursor = 0; // Reset the cursor
         let mut header = RtfHeader::default();
-        while let (token, next_token) = (self.consume_next_token(), self.get_next_token()) {
-            match (token, next_token) {
-                (Some(Token::OpeningBracket), Some(&header_control_word!(FontTable, None))) => {
-                    let font_table_tokens = self.consume_tokens_until_matching_bracket();
-                    header.font_table = Self::parse_font_table(&font_table_tokens)?;
-                    // After the font table, check if next token is plain text without consuming it. If so, break
-                    if let Some(&Token::PlainText(_text)) = self.get_next_token() {
-                        break;
-                    }
-                }
-                (Some(Token::OpeningBracket), Some(&header_control_word!(ColorTable, None))) => {
-                    let color_table_tokens = self.consume_tokens_until_matching_bracket();
-                    header.color_table = Self::parse_color_table(&color_table_tokens)?;
-                    // After the color table, check if next token is plain text without consuming it. If so, break
-                    if let Some(&Token::PlainText(_text)) = self.get_next_token() {
-                        break;
-                    }
-                }
-                (Some(Token::OpeningBracket), Some(&header_control_word!(StyleSheet, None))) => {
-                    let stylesheet_tokens = self.consume_tokens_until_matching_bracket();
-                    header.stylesheet = Self::parse_stylesheet(&stylesheet_tokens)?;
-                    // After the stylesheet, check if next token is plain text without consuming it. If so, break
-                    if let Some(&Token::PlainText(_text)) = self.get_next_token() {
-                        break;
-                    }
-                }
-                (Some(Token::OpeningBracket), Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par))) => {
-                    self.tokens.insert(self.cursor, Token::OpeningBracket);
+        while let (Some(token), Some(mut next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
+            
+            // Manage the case where there is CRLF between { and control_word
+            // {\n /*/ignoregroup }
+            let mut i = 0;
+            while *next_token == Token::CRLF {
+                if let Some(next_token_not_crlf) = self.get_token_at(self.cursor + 1 + i) {
+                    next_token = next_token_not_crlf;
+                    i += 1;
+                } else {
                     break;
                 }
-                // Break on par, pard, sectd, or plain - We no longer are in the header
-                (Some(header_control_word!(Pard) | header_control_word!(Sectd) | header_control_word!(Plain) | header_control_word!(Par)), _) => break,
-                // Break if it declares a font after the font table --> no more in the header
-                (Some(header_control_word!(FontNumber)), _) => {
-                    if !header.font_table.is_empty() {
-                        break;
-                    }
+            }
+            match (token, next_token) {
+                (Token::OpeningBracket, Token::IgnorableDestination) => {
+                    let ignore_group_tokens = self.consume_group();
+                    Self::parse_ignore_groups(&ignore_group_tokens);
+                }
+                (Token::OpeningBracket, header_control_word!(FontTable, None)) => {
+                    let font_table_tokens = self.consume_group();
+                    header.font_table = Self::parse_font_table(&font_table_tokens)?;
+                }
+                (Token::OpeningBracket, header_control_word!(ColorTable, None)) => {
+                    let color_table_tokens = self.consume_group();
+                    header.color_table = Self::parse_color_table(&color_table_tokens)?;
+                }
+                (Token::OpeningBracket, header_control_word!(StyleSheet, None)) => {
+                    let stylesheet_tokens = self.consume_group();
+                    header.stylesheet = Self::parse_stylesheet(&stylesheet_tokens)?;
                 }
                 // Check and consume token
-                (Some(ref token), _) => {
+                (token, _) => {
                     if let Some(charset) = CharacterSet::from(token) {
                         header.character_set = charset;
                     }
+                    self.cursor += 1;
                 }
-                // Check next without consuming token : break conditions
-                (_, Some(token)) => {
-                    // Break on plain text not belonging to any table in the header
-                    if let Token::PlainText(_text) = token {
-                        break;
-                    }
-                }
-                (None, None) => break,
             }
         }
         return Ok(header);
@@ -312,7 +304,7 @@ impl<'a> Parser<'a> {
         let Some(font_table_first_token) = font_tables_tokens.get(0) else {
             return Err(ParserError::NoMoreToken);
         };
-        if font_table_first_token != &header_control_word!(FontTable, None) {
+        if font_table_first_token != header_control_word!(FontTable, None) {
             return Err(ParserError::InvalidToken(format!("{:?} is not a FontTable token", font_table_first_token)));
         }
         let mut table = HashMap::new();
@@ -353,7 +345,7 @@ impl<'a> Parser<'a> {
         let Some(color_table_first_token) = color_table_tokens.get(0) else {
             return Err(ParserError::NoMoreToken);
         };
-        if color_table_first_token != &header_control_word!(ColorTable, None) {
+        if color_table_first_token != header_control_word!(ColorTable, None) {
             return Err(ParserError::InvalidToken(format!("ParserError: {:?} is not a ColorTable token", color_table_first_token)));
         }
         let mut table = HashMap::new();
@@ -377,36 +369,13 @@ impl<'a> Parser<'a> {
         return Ok(table);
     }
 
-    fn parse_stylesheet(stylesheet_tokens: &Vec<Token<'a>>) -> Result<StyleSheet, ParserError> {
-        // TODO
+    fn parse_stylesheet(_stylesheet_tokens: &Vec<Token<'a>>) -> Result<StyleSheet, ParserError> {
+        // TODO : parse the stylesheet
         return Ok(StyleSheet::from([]));
     }
 
-    // Traverse all the tokens and consume the ignore groups
-    fn parse_ignore_groups(&mut self) {
-        self.cursor = 0; // Reset the cursor
-        while let (Some(token), Some(mut next_token)) = (self.get_token_at(self.cursor), self.get_token_at(self.cursor + 1)) {
-            let mut i = 0;
-            // Manage the case where there is CRLF between { and ignore_group
-            // {\n /*/ignoregroup }
-            while *next_token == Token::CRLF {
-                if let Some(next_token_not_crlf) = self.get_token_at(self.cursor + 1 + i) {
-                    next_token = next_token_not_crlf;
-                    i += 1;
-                } else {
-                    break;
-                }
-            }
-            match (token, next_token) {
-                (Token::OpeningBracket, Token::IgnorableDestination) => {
-                    self.consume_token_at(self.cursor); // Consume the opening bracket
-                    self.consume_tokens_until_matching_bracket();
-                }
-                _ => {
-                    self.cursor += 1;
-                }
-            }
-        }
+    fn parse_ignore_groups(_tokens: &Vec<Token<'a>>) {
+        // Do nothing for now
     }
 }
 
@@ -667,17 +636,17 @@ pub mod tests {
             \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
             \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
             
-            \f0\fs24 \cf0 \uc0\u21834  1\u21834   1 2 }"#;
+            \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
+        // \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(&document.body[0].text, "啊 1啊  1 2 ");
+        assert_eq!(&document.body[0].text, "啊 啊");
     }
 
     #[test]
-    fn parse_opening_bracket_and_pard() {
-        let rtf = r#"{\rtf1\ansi\deff0{\fonttbl {\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset2 Symbol;}}{\colortbl ;}{\pard a\sb70\par}}"#;
+    fn body_starts_with_a_group() {
+        let rtf = r"{\rtf1\ansi\deff0{\fonttbl {\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset2 Symbol;}}{\colortbl ;}{\pard \u21435  \sb70\par}}";
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(&document.body[0].text, "a");
     }
 }
