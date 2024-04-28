@@ -171,7 +171,7 @@ However, the `rtf-grimoire` crate provide a similar *Lexer*. Here is a quick ben
 | Crate                                                                 | Version | Duration |
 |-----------------------------------------------------------------------|:-------:|---------:|
 | [`rtf-parser`](https://crates.io/crates/rtf-parser)                   | v0.3.0  |   _7 ms_ |
-| [`rtf-grimoire`](https://crates.io/crates/rtf-grimoire) (only lexing) | v0.2.1  | _123 ms_ |
+| [`rtf-grimoire`](https://crates.io/crates/rtf-grimoire) (only lexing) | v0.2.1  |  _13 ms_ |
 
 *This benchmark has been run on an Intel MacBook Pro, with the release build*.  
 

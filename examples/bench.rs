@@ -1,4 +1,5 @@
 use std::time::Instant;
+
 use rtf_parser::header::StyleSheet;
 use rtf_parser::lexer::Lexer;
 use rtf_parser::parser::Parser;
