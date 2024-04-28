@@ -80,7 +80,7 @@ impl Property {
         let mut offset = 0;
         if let Property::Value(value) = &self {
             if *value < 0 {
-                offset = 65_535;
+                offset = 65_536;
             }
             return u16::try_from(value + offset).or(Err(ParserError::UnicodeParsingError(*value)));
         }
@@ -94,6 +94,7 @@ pub enum ControlWord<'a> {
     Ansi,
 
     Unicode,
+    UnicodeIgnoreCount,
 
     FontTable,
     FontCharset,
@@ -178,6 +179,7 @@ impl<'a> ControlWord<'a> {
             r"\ansi"          => ControlWord::Ansi,
             // Unicode
             r"\u"             => ControlWord::Unicode,
+            r"\uc"            => ControlWord::UnicodeIgnoreCount,
             // Header
             r"\fonttbl"       => ControlWord::FontTable,
             r"\colortbl"      => ControlWord::ColorTable,

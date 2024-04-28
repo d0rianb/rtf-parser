@@ -77,6 +77,16 @@ impl fmt::Display for ParserError {
     }
 }
 
+// This state keeps track of each value that depends on the scope nesting
+#[derive(Derivative, Debug, Clone, PartialEq, Hash)]
+#[derivative(Default)]
+struct ParserState {
+    pub painter: Painter,
+    pub paragraph: Paragraph,
+    #[derivative(Default(value = "1"))]
+    pub unicode_ignore_count: i32,
+}
+
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
     parsed_item: Vec<bool>,
@@ -119,11 +129,11 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-                                                   // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
+        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
+        // Init the state of the docuement. the stack is used to keep track of the different scope changes.
+        let mut state_stack: Vec<ParserState> = vec![ParserState::default()];
         // Parse the body
-        let mut painter_stack: Vec<Painter> = vec![Painter::default()];
-        let mut paragraph = Paragraph::default();
         let len = self.tokens.len();
         let mut i = 0;
 
@@ -137,22 +147,24 @@ impl<'a> Parser<'a> {
 
             match token {
                 Token::OpeningBracket => {
-                    if let Some(last_painter) = painter_stack.last() {
-                        painter_stack.push(last_painter.clone());
+                    if let Some(last_state) = state_stack.last() {
+                        state_stack.push(last_state.clone()); // Inherit from the last state properties
                     } else {
-                        painter_stack.push(Painter::default());
+                        state_stack.push(ParserState::default());
                     }
                 }
                 Token::ClosingBracket => {
-                    let painter = painter_stack.pop();
-                    if painter == None {
+                    let state = state_stack.pop();
+                    if state.is_none() {
                         return Err(ParserError::MalformedPainterStack);
                     }
                 }
                 Token::ControlSymbol((control_word, property)) => {
-                    let Some(current_painter) = painter_stack.last_mut() else {
+                    let Some(current_state) = state_stack.last_mut() else {
                         return Err(ParserError::MalformedPainterStack);
                     };
+                    let current_painter = &mut current_state.painter;
+                    let paragraph = &mut current_state.paragraph;
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
                         ControlWord::ColorNumber        => current_painter.color_ref = property.get_value_as::<ColorRef>()?,
@@ -167,7 +179,7 @@ impl<'a> Parser<'a> {
                         ControlWord::Smallcaps          => current_painter.smallcaps = property.as_bool(),
                         ControlWord::Strikethrough      => current_painter.strike = property.as_bool(),
                         // Paragraph
-                        ControlWord::Pard               => paragraph = Paragraph::default(), // Reset the par
+                        ControlWord::Pard               => *paragraph = Paragraph::default(), // Reset the par
                         ControlWord::Plain              => *current_painter = Painter::default(), // Reset the painter
                         ControlWord::ParDefTab          => paragraph.tab_width = property.get_value(),
                         ControlWord::LeftAligned
@@ -178,8 +190,9 @@ impl<'a> Parser<'a> {
                         ControlWord::SpaceAfter         => paragraph.spacing.after = property.get_value(),
                         ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
                         ControlWord::SpaceLineMul       => paragraph.spacing.line_multiplier = property.get_value(),
+                        ControlWord::UnicodeIgnoreCount => current_state.unicode_ignore_count = property.get_value(),
                         ControlWord::Unicode            => {
-                            let mut unicodes = vec![];
+                            let mut unicodes = Vec::with_capacity(current_state.unicode_ignore_count as usize + 1); // try to avoid realocation due to fallback unicodes
                             if let Ok(unicode) = property.get_unicode_value() {
                                 unicodes.push(unicode);
                             }
@@ -196,16 +209,30 @@ impl<'a> Parser<'a> {
                                 }
                             }
                             if unicodes.len() > 0 {
+                                // Handle the fallback unicode (\uc2 \u0000 'FA 'FB)
+                                let mut ignore_mask = vec![true; unicodes.len()];
+                                let mut ignore_counter = 0;
+                                for i in 1..unicodes.len() {
+                                    if unicodes[i] <= 255 && ignore_counter < current_state.unicode_ignore_count {
+                                        ignore_counter += 1;
+                                        ignore_mask[i] = false;
+                                    } else {
+                                        ignore_counter = 0;
+                                    }
+                                }
+                                let mut ignore_mask_iter = ignore_mask.iter();
+                                unicodes.retain(|_| *ignore_mask_iter.next().unwrap());
+                                // Convert the unicode to string
                                 let str = String::from_utf16(unicodes.as_slice()).unwrap();
-                                Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?;
+                                Self::add_text_to_document(&str, &state_stack, &mut document)?;
                             }
                         }
                         // Others tokens
                         _ => {}
                     };
                 }
-                Token::PlainText(text) => Self::add_text_to_document(*text, &painter_stack, &paragraph, &mut document)?,
-                Token::CRLF => Self::add_text_to_document("\n", &painter_stack, &paragraph, &mut document)?,
+                Token::PlainText(text) => Self::add_text_to_document(*text, &state_stack, &mut document)?,
+                Token::CRLF => Self::add_text_to_document("\n", &state_stack, &mut document)?,
                 Token::IgnorableDestination => {
                     return Err(ParserError::IgnorableDestinationParsingError);
                 }
@@ -216,10 +243,12 @@ impl<'a> Parser<'a> {
         return Ok(document);
     }
 
-    fn add_text_to_document(text: &str, painter_stack: &Vec<Painter>, paragraph: &Paragraph, document: &mut RtfDocument) -> Result<(), ParserError> {
-        let Some(current_painter) = painter_stack.last() else {
+    fn add_text_to_document(text: &str, state_stack: &Vec<ParserState>, document: &mut RtfDocument) -> Result<(), ParserError> {
+        let Some(current_state) = state_stack.last() else {
             return Err(ParserError::MalformedPainterStack);
         };
+        let current_painter = &current_state.painter;
+        let paragraph = &current_state.paragraph;
         let last_style_group = document.body.last_mut();
         // If the painter is the same as the previous one, merge the two block.
         if let Some(group) = last_style_group {
@@ -681,6 +710,26 @@ pub mod tests {
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].text, "a👿1 啊");
     }
+
+    #[test]
+    fn parse_unicode_with_fallback() {
+        // Should only consider the first unicode, not the two fallback chars
+        let rtf = r#"{\rtf1\ansi
+            {\f0 \u-10179\'5f\u-9089\'5f}
+            {\f1 \uc2\u32767\'c2\'52}
+            {\f2 \uc2\u26789\'97\'73}
+            {\f3 b\'eate}
+            {\f4 \uc0 b\'ea\'eate}
+           }"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].text, "👿");
+        assert_eq!(&document.body[1].text, "翿");
+        assert_eq!(&document.body[2].text, "梥");
+        assert_eq!(&document.body[3].text, "bête");
+        assert_eq!(&document.body[4].text, "bêête");
+    }
+
 
     #[test]
     fn body_starts_with_a_group() {
