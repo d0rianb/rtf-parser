@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::tokens::{ControlWord, Token};
+use crate::tokens::{ControlWord, Property, Token};
 use crate::utils::StrUtils;
 use crate::{recursive_tokenize, recursive_tokenize_with_init};
 
@@ -100,14 +100,13 @@ impl Lexer {
                     return Ok(vec![Token::PlainText(tail)]); // No recursive tokenize here, juste some plain text because the char is escaped
                 }
                 '\'' => {
-                    // Escaped unicode : \'f0
+                    // Escaped unicode in hex value : \'f0
                     let tail = slice.get(1..).unwrap_or("");
                     if tail.len() < 2 {
                         return Err(LexerError::InvalidUnicode(tail.into()));
                     }
                     let byte = u8::from_str_radix(&tail[1..3], 16)?; // f0
-                    let ch = char::from(byte); // from 0xf0
-                    let mut ret = vec![Token::EscapedChar(ch)];
+                    let mut ret = vec![Token::ControlSymbol((ControlWord::Unicode, Property::Value(byte as i32)))];
                     recursive_tokenize!(&tail[3..], ret);
                     return Ok(ret);
                 }
@@ -161,9 +160,10 @@ impl Lexer {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::lexer::Lexer;
-    use crate::tokens::ControlWord::{Ansi, Bold, ColorBlue, ColorNumber, ColorRed, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unknown};
+    use crate::tokens::ControlWord::{Ansi, Bold, ColorBlue, ColorNumber, ColorRed, FontNumber, FontSize, FontTable, Italic, Par, Pard, Rtf, Underline, Unicode, Unknown};
     use crate::tokens::Property::*;
     use crate::tokens::Token::*;
+    use crate::tokens::{ControlWord, Property};
 
     #[test]
     fn simple_tokenize_test() {
@@ -304,8 +304,11 @@ if (a == b) \{\
 
     #[test]
     fn should_handle_escaped_char() {
-        let rtf = r"{je suis une b\'eate}";
+        let rtf = r"{je suis une b\'eate}"; // ê = 0xea = 234
         let tokens = Lexer::scan(rtf).unwrap();
-        assert_eq!(tokens, [OpeningBracket, PlainText("je suis une b"), EscapedChar('ê'), PlainText("te"), ClosingBracket,]);
+        assert_eq!(
+            tokens,
+            [OpeningBracket, PlainText("je suis une b"), ControlSymbol((Unicode, Value(234))), PlainText("te"), ClosingBracket,]
+        );
     }
 }

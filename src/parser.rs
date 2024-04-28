@@ -54,6 +54,8 @@ pub enum ParserError {
     InvalidColorIdentifier(Property),
     NoMoreToken,
     ValueCastError(String),
+    UnicodeParsingError(i32),
+    ParseEmptyToken,
 }
 
 impl std::error::Error for ParserError {}
@@ -69,13 +71,15 @@ impl fmt::Display for ParserError {
             ParserError::InvalidColorIdentifier(property) => write!(f, "Invalid color identifier : {:?}", property),
             ParserError::NoMoreToken => write!(f, "No more token to parse"),
             ParserError::ValueCastError(_type) => write!(f, "Unable to cast i32 to {_type}"),
+            ParserError::UnicodeParsingError(value) => write!(f, "Unable to parse {value} value to unicode"),
+            ParserError::ParseEmptyToken => write!(f, "Try to parse an empty token, this should never happen. If so, please open an issue in the github repository"),
         };
     }
 }
 
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
-    parsed_item : Vec<bool>,
+    parsed_item: Vec<bool>,
     cursor: usize,
 }
 
@@ -84,10 +88,10 @@ impl<'a> Parser<'a> {
         return Self {
             parsed_item: vec![false; tokens.len()],
             tokens,
-            cursor: 0
+            cursor: 0,
         };
     }
-    
+
     pub fn get_tokens(&self) -> Vec<&Token> {
         // It ignores the empty tokens, that replaced already parsed tokens istead of deleting them for performance reasons
         return self.tokens.iter().filter(|t| *t != &Token::Empty).collect();
@@ -115,7 +119,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
+                                                   // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
         // Parse the body
         let mut painter_stack: Vec<Painter> = vec![Painter::default()];
@@ -130,11 +134,14 @@ impl<'a> Parser<'a> {
                 continue;
             }
             let token = &self.tokens[i];
-            i += 1;
 
             match token {
                 Token::OpeningBracket => {
-                    painter_stack.push(Painter::default());
+                    if let Some(last_painter) = painter_stack.last() {
+                        painter_stack.push(last_painter.clone());
+                    } else {
+                        painter_stack.push(Painter::default());
+                    }
                 }
                 Token::ClosingBracket => {
                     let painter = painter_stack.pop();
@@ -172,25 +179,39 @@ impl<'a> Parser<'a> {
                         ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
                         ControlWord::SpaceLineMul       => paragraph.spacing.line_multiplier = property.get_value(),
                         ControlWord::Unicode            => {
-                            let unicode = property.get_value_as::<u16>()?;
-                            let str = String::from_utf16(&vec![unicode]).unwrap();
-                            Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?
+                            let mut unicodes = vec![];
+                            if let Ok(unicode) = property.get_unicode_value() {
+                                unicodes.push(unicode);
+                            }
+                            // Get the following unicode in case of compounds characters
+                            while i + 1 < len {
+                                // We should not check if the tokens has already been parsed, because we are looking for the following token in the document
+                                if let Token::ControlSymbol((ControlWord::Unicode, property)) = &self.tokens[i + 1] {
+                                    if let Ok(unicode) = property.get_unicode_value() {
+                                        unicodes.push(unicode);
+                                    }
+                                    i += 1;
+                                } else {
+                                    break;
+                                }
+                            }
+                            if unicodes.len() > 0 {
+                                let str = String::from_utf16(unicodes.as_slice()).unwrap();
+                                Self::add_text_to_document(&str, &painter_stack, &paragraph, &mut document)?;
+                            }
                         }
-                        // Others
+                        // Others tokens
                         _ => {}
                     };
-                }
-                Token::EscapedChar(ch) => {
-                    let mut tmp = [0u8; 4];
-                    Self::add_text_to_document(ch.encode_utf8(&mut tmp), &painter_stack, &paragraph, &mut document)?
                 }
                 Token::PlainText(text) => Self::add_text_to_document(*text, &painter_stack, &paragraph, &mut document)?,
                 Token::CRLF => Self::add_text_to_document("\n", &painter_stack, &paragraph, &mut document)?,
                 Token::IgnorableDestination => {
                     return Err(ParserError::IgnorableDestinationParsingError);
                 }
-                Token::Empty => panic!("Try to parse an empty token, this should not happen")
+                Token::Empty => return Err(ParserError::ParseEmptyToken),
             };
+            i += 1;
         }
         return Ok(document);
     }
@@ -605,25 +626,16 @@ pub mod tests {
         let rtf = r"{\rtf1{\fonttbl {\f0 Times;}}\f0\b\fs36\u\cf2\plain Plain text}";
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        let mut painter = Painter::default();
-        painter.bold = true;
-        painter.font_size = 36;
-        assert_eq!(document.body[0].painter, painter);
+        assert_eq!(document.body[0].painter, Painter::default());
     }
 
     #[test]
     fn parse_color_table() {
-        // cf0 is unset color
-        // cf1 is first color
-        // cf2 is second color
-        // etc...
+        // cf0 is unset color, cf1 is first color, cf2 is second color, etc ...
         let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
             \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset134 PingFangSC-Regular;}
             {\colortbl;\red255\green255\blue255;\red251\green2\blue7;\red114\green44\blue253;}
             {\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;\cssrgb\c52799\c30710\c99498;}
-            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
-            
             \f0\fs24 \cf2 A
             \f1 \cf3 B}"#;
         let tokens = Lexer::scan(rtf).unwrap();
@@ -655,16 +667,19 @@ pub mod tests {
         // \u21834 => 啊
         let rtf = r#"{\rtf1\ansi\ansicpg936\cocoartf2761
             \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-            {\colortbl;\red255\green255\blue255;}
-            {\*\expandedcolortbl;;}
-            \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-            \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
-            
             \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
-        // \f0\fs24 \cf0 \uc0\u21834  \u21834 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].text, "啊 啊");
+    }
+
+    #[test]
+    fn parse_two_characters_compound_unicode() {
+        let rtf = r#"{\rtf1\ansi
+            \f0 a\u55357 \u56447 1 \u21834}"#;
+        let tokens = Lexer::scan(rtf).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(&document.body[0].text, "a👿1 啊");
     }
 
     #[test]
@@ -672,5 +687,17 @@ pub mod tests {
         let rtf = r"{\rtf1\ansi\deff0{\fonttbl {\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset2 Symbol;}}{\colortbl ;}{\pard \u21435  \sb70\par}}";
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
+    }
+
+    #[test]
+    fn rtf_different_semantic() {
+        let rtf1 = r"{\rtf1 \b bold \i Bold Italic \i0 Bold again}";
+        let rtf2 = r"{\rtf1 \b bold {\i Bold Italic }Bold again}";
+        let rtf3 = r"{\rtf1 \b bold \i Bold Italic \plain\b Bold again}";
+        let doc1 = RtfDocument::try_from(rtf1).unwrap();
+        let doc2 = RtfDocument::try_from(rtf2).unwrap();
+        let doc3 = RtfDocument::try_from(rtf3).unwrap();
+        assert_eq!(doc1.body, doc2.body);
+        assert_eq!(doc3.body, doc2.body);
     }
 }

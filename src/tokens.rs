@@ -10,13 +10,12 @@ use crate::parser::ParserError;
 #[derive(PartialEq, Eq, Clone)]
 pub enum Token<'a> {
     PlainText(&'a str),
-    EscapedChar(char),
     OpeningBracket,
     ClosingBracket,
     CRLF,                 // Line-return \n
     IgnorableDestination, // \*\ <destination-name>
     ControlSymbol(ControlSymbol<'a>),
-    Empty                 // Used by the parser for optimization
+    Empty, // Used by the parser for optimization
 }
 
 #[allow(dead_code)]
@@ -25,7 +24,6 @@ impl<'a> fmt::Debug for Token<'a> {
         #[rustfmt::skip]
         return match self {
             Token::PlainText(text)        => write!(f, r"PlainText : {:?}", *text),
-            Token::EscapedChar(ch)        => write!(f, r"EscapedChar : {ch}"),
             Token::OpeningBracket         => write!(f, "OpeningBracket"),
             Token::ClosingBracket         => write!(f, "ClosingBracket"),
             Token::CRLF                   => write!(f, "CRLF"),
@@ -46,7 +44,7 @@ pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 pub enum Property {
     On,         // 1
     Off,        // 0
-    Value(i32), // Specified as i32 in the specification
+    Value(i32), // Specified as i16 in the spec 1.5 but some softwre use i32 (ex: TextEdit for unicode)
     None,       // No parameter
 }
 
@@ -73,6 +71,20 @@ impl Property {
     // Default variant
     pub fn get_value(&self) -> i32 {
         return self.get_value_as::<i32>().expect("i32 to i32 conversion should never fail");
+    }
+
+    /// Return the u16 corresponding value of the unicode
+    pub fn get_unicode_value(&self) -> Result<u16, ParserError> {
+        // RTF control words generally accept signed 16-bit numbers as arguments.
+        // For this reason, Unicode values greater than 32767 must be expressed as negative numbers.
+        let mut offset = 0;
+        if let Property::Value(value) = &self {
+            if *value < 0 {
+                offset = 65_535;
+            }
+            return u16::try_from(value + offset).or(Err(ParserError::UnicodeParsingError(*value)));
+        }
+        return Err(ParserError::UnicodeParsingError(0));
     }
 }
 
@@ -164,6 +176,8 @@ impl<'a> ControlWord<'a> {
         let control_word = match prefix {
             r"\rtf"           => ControlWord::Rtf,
             r"\ansi"          => ControlWord::Ansi,
+            // Unicode
+            r"\u"             => ControlWord::Unicode,
             // Header
             r"\fonttbl"       => ControlWord::FontTable,
             r"\colortbl"      => ControlWord::ColorTable,
@@ -177,7 +191,6 @@ impl<'a> ControlWord<'a> {
             // Format
             r"\i"             => ControlWord::Italic,
             r"\b"             => ControlWord::Bold,
-            r"\u"             => ControlWord::Unicode,
             r"\ul"            => ControlWord::Underline,
             r"\ulnone"        => ControlWord::UnderlineNone,
             r"\super"         => ControlWord::Superscript,

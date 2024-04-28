@@ -4,7 +4,7 @@
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
 [![docs.rs](https://img.shields.io/docsrs/rtf-parser?style=flat-square)](https://docs.rs/rtf-parser)
 
-A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies.
+A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies, with UTF-16 unicode support.
   
 The official documentation is available at [docs.rs/rtf-parser](https://docs.rs/rtf-parser).
 
@@ -158,16 +158,22 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
+## Known limitaion
+For now, the `\bin` keyword is not taken into account. As its content is text in binary format, it can mess with the lexing algorithm, and crash the program. 
+Future support for the binary will soon come.
+
+The base64 images are not supported as well, but can be safely parse. 
+
 ## Benchmark
 For now, there is no comparable crates to [`rtf-parser`](https://crates.io/crates/rtf-parser).  
-However, the `rtf-grimoire` crate provide a similar *Lexer*. Here is a quick benchmark of the lexing and parsing of a 500kB rtf docuement.
+However, the `rtf-grimoire` crate provide a similar *Lexer*. Here is a quick benchmark of the lexing and parsing of a [500kB rtf document](./resources/tests/file-sample_500kB.rtf).
 
 | Crate                                                                 | Version | Duration |
 |-----------------------------------------------------------------------|:-------:|---------:|
-| [`rtf-parser`](https://crates.io/crates/rtf-parser)                   | v0.2.2  |  _30 ms_ |
+| [`rtf-parser`](https://crates.io/crates/rtf-parser)                   | v0.3.0  |   _7 ms_ |
 | [`rtf-grimoire`](https://crates.io/crates/rtf-grimoire) (only lexing) | v0.2.1  | _123 ms_ |
 
-*This benchmark has been made on an Intel MacBook Pro*.  
+*This benchmark has been run on an Intel MacBook Pro, with the release build*.  
 
 For the `rtf-parser`, most of the compute time (_65 %_) is spent by the lexing process. There is still lot of room for improvement.  
 
