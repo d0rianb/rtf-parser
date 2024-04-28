@@ -4,8 +4,10 @@
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
 [![docs.rs](https://img.shields.io/docsrs/rtf-parser?style=flat-square)](https://docs.rs/rtf-parser)
 
-A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies, with UTF-16 unicode support.
-  
+A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies. 
+
+It implements the last version of the RTF specification (1.9), with modern UTF-16 unicode support. 
+
 The official documentation is available at [docs.rs/rtf-parser](https://docs.rs/rtf-parser).
 
 ## Installation
@@ -158,11 +160,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
-## Known limitaion
+## Known limitations
 For now, the `\bin` keyword is not taken into account. As its content is text in binary format, it can mess with the lexing algorithm, and crash the program. 
 Future support for the binary will soon come.
 
-The base64 images are not supported as well, but can be safely parse. 
+The base64 images are not supported as well, but can safely be parsed. 
 
 ## Benchmark
 For now, there is no comparable crates to [`rtf-parser`](https://crates.io/crates/rtf-parser).  

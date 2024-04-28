@@ -129,7 +129,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
+                                                   // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
         // Init the state of the docuement. the stack is used to keep track of the different scope changes.
         let mut state_stack: Vec<ParserState> = vec![ParserState::default()];
@@ -729,7 +729,6 @@ pub mod tests {
         assert_eq!(&document.body[3].text, "bête");
         assert_eq!(&document.body[4].text, "bêête");
     }
-
 
     #[test]
     fn body_starts_with_a_group() {
