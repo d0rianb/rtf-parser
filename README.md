@@ -177,8 +177,5 @@ However, the `rtf-grimoire` crate provide a similar *Lexer*. Here is a quick ben
 
 *This benchmark has been run on an Intel MacBook Pro, with the release build*.  
 
-For the `rtf-parser`, most of the compute time (_65 %_) is spent by the lexing process. There is still lot of room for improvement.  
-
-
 
 
