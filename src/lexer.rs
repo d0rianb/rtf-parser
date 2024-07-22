@@ -1,10 +1,19 @@
 use std::fmt;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+use tsify::{JsValueSerdeExt, Tsify};
+use wasm_bindgen::convert::IntoWasmAbi;
+use wasm_bindgen::describe::WasmDescribe;
+use wasm_bindgen::JsValue;
+
 use crate::tokens::{ControlWord, Property, Token};
 use crate::utils::StrUtils;
 use crate::{recursive_tokenize, recursive_tokenize_with_init};
+use crate::parser::ParserError;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum LexerError {
     Error(String),
     InvalidUnicode(String),
@@ -22,6 +31,12 @@ impl fmt::Display for LexerError {
             LexerError::Error(msg) => write!(f, "{}", msg),
         };
         return Ok(());
+    }
+}
+
+impl Into<JsValue> for LexerError {
+    fn into(self) -> JsValue {
+        return JsValue::from_serde(&self).unwrap();
     }
 }
 

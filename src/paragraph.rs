@@ -2,11 +2,12 @@
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use tsify::Tsify;
 
 use crate::tokens::ControlWord;
 
 #[derive(Debug, Default, Clone, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
 pub struct Paragraph {
     pub alignment: Alignment,
     pub spacing: Spacing,

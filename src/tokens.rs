@@ -2,12 +2,21 @@ use std::any::type_name;
 use std::convert::TryFrom;
 use std::fmt;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+use tsify::{JsValueSerdeExt, Tsify};
+use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::wasm_bindgen;
+use crate::header::FontRef;
+
 use crate::lexer::LexerError;
 use crate::parser::ParserError;
 
 /// Parser representation of an RTF token
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
+#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi))]
 pub enum Token<'a> {
     PlainText(&'a str),
     OpeningBracket,
@@ -36,11 +45,13 @@ impl<'a> fmt::Debug for Token<'a> {
 
 /// A control symbol is a pair (control_word, property)
 /// In the RTF specification, it refers to 'control word entity'
+#[tsify::declare]
 pub type ControlSymbol<'a> = (ControlWord<'a>, Property);
 
 /// Parameters for a control word
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum Property {
     On,         // 1
     Off,        // 0
@@ -48,6 +59,13 @@ pub enum Property {
     None,       // No parameter
 }
 
+impl Into<JsValue> for Property {
+    fn into(self) -> JsValue {
+        return JsValue::from_serde(&self).unwrap();
+    }
+}
+
+#[wasm_bindgen]
 impl Property {
     pub fn as_bool(&self) -> bool {
         match self {
@@ -59,6 +77,7 @@ impl Property {
     }
 
     // Retrieve and cast the i32 value to a specific numeric type
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_value_as<T: TryFrom<i32>>(&self) -> Result<T, ParserError> {
         let error: Result<T, ParserError> = Err(ParserError::ValueCastError(type_name::<T>().to_string()));
         if let Property::Value(value) = &self {
@@ -69,9 +88,18 @@ impl Property {
     }
 
     // Default variant
+    #[cfg(target_arch = "wasm32")]
+    pub fn get_value(&self) -> i32 {
+        if let Property::Value(value) = &self {
+            return *value;
+        }
+        return 0;
+    }
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_value(&self) -> i32 {
         return self.get_value_as::<i32>().expect("i32 to i32 conversion should never fail");
     }
+
 
     /// Return the u16 corresponding value of the unicode
     pub fn get_unicode_value(&self) -> Result<u16, ParserError> {
@@ -89,6 +117,8 @@ impl Property {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
+#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi))]
 pub enum ControlWord<'a> {
     Rtf,
     Ansi,
@@ -143,6 +173,7 @@ pub enum ControlWord<'a> {
     Unknown(&'a str),
 }
 
+#[wasm_bindgen]
 impl<'a> ControlWord<'a> {
     // https://www.biblioscape.com/rtf15_spec.htm
     // version 1.5 should be compatible with 1.9

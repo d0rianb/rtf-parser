@@ -48,7 +48,7 @@ impl TryFrom<&mut fs::File> for RtfDocument {
 
 impl RtfDocument {
     /// Create an `RtfDocument` from a rtf file path
-    pub fn from_filepath(filename: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn from_filepath(filename: &str) -> Result<RtfDocument, Box<dyn Error>> {
         let file_content = fs::read_to_string(filename)?;
         return Self::try_from(file_content);
     }

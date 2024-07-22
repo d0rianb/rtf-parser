@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8" />
+    <title>RTF-parser WASM example</title>
+    <style>
+        section {
+            display: flex;
+            flex-flow: column nowrap;
+        }
+
+        button {
+            max-width: 30vw;
+        }
+    </style>
+</head>
+<body>
+<h1>RTF-Parser example</h1>
+<section>
+<label>
+    <textarea></textarea>
+</label>
+<button>Parse</button>
+</section>
+
+<script type="module">
+    import init, { ControlWord } from "../../pkg/rtf_parser.js";
+    init().then(() => {
+        console.log(ControlWord.from("\rtf1"))
+        // Lexer.scan("{ \\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard Voici du texte en {\\b gras}.\\par }");
+    });
+</script>
+</body>
+</html>
