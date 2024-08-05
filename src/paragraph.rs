@@ -3,11 +3,13 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::tokens::ControlWord;
 
-#[derive(Debug, Default, Clone, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen]
 pub struct Paragraph {
     pub alignment: Alignment,
     pub spacing: Spacing,
@@ -17,7 +19,8 @@ pub struct Paragraph {
 
 /// Alignement of a paragraph (left, right, center, justify)
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
+#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum Alignment {
     #[default]
     LeftAligned, // \ql
@@ -39,8 +42,9 @@ impl From<&ControlWord<'_>> for Alignment {
 }
 
 /// The vertical margin before / after a block of text
-#[derive(Debug, Default, Clone, PartialEq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen]
 pub struct Spacing {
     pub before: i32,
     pub after: i32,
@@ -48,8 +52,9 @@ pub struct Spacing {
     pub line_multiplier: i32,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
+#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum SpaceBetweenLine {
     Value(i32),
     #[default]
@@ -72,8 +77,9 @@ impl From<i32> for SpaceBetweenLine {
 }
 
 // This struct can not be an enum because left-indent and right-ident can both be defined at the same time
-#[derive(Default, Debug, Clone, PartialEq, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen]
 pub struct Indentation {
     pub left: i32,
     pub right: i32,

@@ -24,10 +24,10 @@
 </section>
 
 <script type="module">
-    import init, { ControlWord } from "../../pkg/rtf_parser.js";
+    import init, { parse_rtf } from "../../pkg/rtf_parser.js";
     init().then(() => {
-        console.log(ControlWord.from("\rtf1"))
-        // Lexer.scan("{ \\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard Voici du texte en {\\b gras}.\\par }");
+        let doc = parse_rtf("{ \\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard Voici du texte en {\\b gras}.\\par }");
+        console.log(doc)
     });
 </script>
 </body>

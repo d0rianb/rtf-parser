@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::paragraph::Paragraph;
 use crate::parser::Painter;
@@ -34,7 +36,8 @@ pub struct Style {
 
 /// Information about the document, including references to fonts & styles
 #[derive(Default, Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
+#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct RtfHeader {
     pub character_set: CharacterSet,
     pub font_table: FontTable,
@@ -44,6 +47,7 @@ pub struct RtfHeader {
 
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen(getter_with_clone)]
 pub struct Font {
     pub name: String,
     pub character_set: u8,
@@ -52,6 +56,7 @@ pub struct Font {
 
 #[derive(Hash, Default, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen]
 pub struct Color {
     pub red: u8,
     pub green: u8,
@@ -60,7 +65,8 @@ pub struct Color {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Default, Clone, Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
+#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum CharacterSet {
     #[default]
     Ansi,
@@ -81,8 +87,9 @@ impl CharacterSet {
 }
 
 #[allow(dead_code)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
 #[derive(Debug, PartialEq, Hash, Clone, Default)]
+#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum FontFamily {
     #[default]
     Nil,
