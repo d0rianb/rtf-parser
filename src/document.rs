@@ -76,6 +76,8 @@ pub(crate) mod tests {
     use super::*;
     use crate::document::RtfDocument;
 
+    // Todo : introduce wasm tests
+
     #[test]
     fn get_text_from_document() {
         let rtf = r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#;

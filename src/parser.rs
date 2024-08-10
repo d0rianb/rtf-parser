@@ -4,13 +4,9 @@ use std::{fmt, mem};
 use derivative::Derivative;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use tsify::{JsValueSerdeExt, Tsify};
-use wasm_bindgen::JsValue;
-
 
 use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Color, ColorRef, ColorTable, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
-use crate::lexer::LexerError;
 use crate::paragraph::{Alignment, Paragraph, SpaceBetweenLine};
 use crate::tokens::{ControlWord, Property, Token};
 
@@ -50,7 +46,6 @@ pub struct Painter {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum ParserError {
     InvalidToken(String),
     IgnorableDestinationParsingError,
@@ -81,13 +76,6 @@ impl fmt::Display for ParserError {
         };
     }
 }
-
-impl Into<JsValue> for ParserError {
-    fn into(self) -> JsValue {
-        return JsValue::from_serde(&self).unwrap();
-    }
-}
-
 
 // This state keeps track of each value that depends on the scope nesting
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
@@ -141,7 +129,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-                                                   // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
+        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
         // Init the state of the docuement. the stack is used to keep track of the different scope changes.
         let mut state_stack: Vec<ParserState> = vec![ParserState::default()];
@@ -179,9 +167,9 @@ impl<'a> Parser<'a> {
                     let paragraph = &mut current_state.paragraph;
                     #[rustfmt::skip]  // For now, rustfmt does not support this kind of alignement
                     match control_word {
-                        ControlWord::ColorNumber        => current_painter.color_ref = property.get_value() as ColorRef,
-                        ControlWord::FontNumber         => current_painter.font_ref = property.get_value() as FontRef,
-                        ControlWord::FontSize           => current_painter.font_size = property.get_value() as u16,
+                        ControlWord::ColorNumber        => current_painter.color_ref = property.get_value_as::<ColorRef>()?,
+                        ControlWord::FontNumber         => current_painter.font_ref = property.get_value_as::<FontRef>()?,
+                        ControlWord::FontSize           => current_painter.font_size = property.get_value_as::<u16>()?,
                         ControlWord::Bold               => current_painter.bold = property.as_bool(),
                         ControlWord::Italic             => current_painter.italic = property.as_bool(),
                         ControlWord::Underline          => current_painter.underline = property.as_bool(),
@@ -195,9 +183,9 @@ impl<'a> Parser<'a> {
                         ControlWord::Plain              => *current_painter = Painter::default(), // Reset the painter
                         ControlWord::ParDefTab          => paragraph.tab_width = property.get_value(),
                         ControlWord::LeftAligned
-                            | ControlWord::RightAligned
-                            | ControlWord::Center
-                            | ControlWord::Justify      => paragraph.alignment = Alignment::from(control_word),
+                        | ControlWord::RightAligned
+                        | ControlWord::Center
+                        | ControlWord::Justify      => paragraph.alignment = Alignment::from(control_word),
                         ControlWord::SpaceBefore        => paragraph.spacing.before = property.get_value(),
                         ControlWord::SpaceAfter         => paragraph.spacing.after = property.get_value(),
                         ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
@@ -440,10 +428,10 @@ impl<'a> Parser<'a> {
         for token in color_table_tokens.iter() {
             match token {
                 Token::ControlSymbol((control_word, property)) => match control_word {
-                    ControlWord::ColorRed => current_color.red = property.get_value() as u8,
-                    ControlWord::ColorGreen => current_color.green = property.get_value() as u8,
+                    ControlWord::ColorRed => current_color.red = property.get_value_as::<u8>()?,
+                    ControlWord::ColorGreen => current_color.green = property.get_value_as::<u8>()?,
                     ControlWord::ColorBlue => {
-                        current_color.blue = property.get_value() as u8;
+                        current_color.blue = property.get_value_as::<u8>()?;
                         table.insert(current_key, current_color.clone());
                         current_key += 1;
                     }
@@ -694,7 +682,7 @@ pub mod tests {
             {\*\expandedcolortbl;;}
             \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
             \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
-            
+
             \f0\fs24 \cf0 \ul \ulc0 a\ulnone A}"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
@@ -735,7 +723,7 @@ pub mod tests {
            }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
-        assert_eq!(&document.body[0].text, "👿"); // default case (\uc1)
+        assert_eq!(&document.body[0].text, "👿");
         assert_eq!(&document.body[1].text, "翿");
         assert_eq!(&document.body[2].text, "梥");
         assert_eq!(&document.body[3].text, "bête");
