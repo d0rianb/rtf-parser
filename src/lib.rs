@@ -13,3 +13,11 @@ pub mod paragraph;
 pub mod parser;
 pub mod tokens;
 mod utils;
+
+// Re-export all the symbols to the global rtf-parser namespace
+pub use document::*;
+pub use header::*;
+pub use lexer::*;
+pub use paragraph::*;
+pub use parser::*;
+pub use tokens::*;

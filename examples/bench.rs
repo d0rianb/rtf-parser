@@ -1,8 +1,6 @@
 use std::time::Instant;
 
-use rtf_parser::header::StyleSheet;
-use rtf_parser::lexer::Lexer;
-use rtf_parser::parser::Parser;
+use rtf_parser::{Lexer, Parser, StyleSheet};
 
 fn main() {
     let start = Instant::now();

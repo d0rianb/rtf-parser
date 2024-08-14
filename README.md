@@ -25,10 +25,7 @@ The library is split into 2 main components:
 The lexer scans the document and returns a `Vec<Token>` which represent the RTF file in a code-understandable manner.
 These tokens can then be passed to the parser to transcript it to a real document : `RtfDocument`.
 ```rust
-use rtf_parser::lexer::Lexer;
-use rtf_parser::tokens::Token;
-use rtf_parser::parser::Parser;
-use rtf_parser::document::RtfDocument;
+use rtf_parser::{ Lexer, Token, Parser, RtfDocument };
 
 fn main() -> Result<(), Box<dyn Error>> {
     let tokens: Vec<Token> = Lexer::scan("<rtf>")?;
@@ -40,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 or in a more concise way :
 
 ```rust 
-use rtf_parser::document::RtfDocument;
+use rtf_parser::RtfDocument;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let doc: RtfDocument = RtfDocument::try_from("<rtf>")?;    
@@ -104,8 +101,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 ## Examples 
 A complete example of rtf parsing is presented below : 
 ```rust
-use rtf_parser::lexer::Lexer;
-use rtf_parser::parser::Parser;
+use rtf_parser::Lexer;
+use rtf_parser::Parser;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let rtf_text = r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#;
