@@ -87,8 +87,8 @@ impl CharacterSet {
 }
 
 #[allow(dead_code)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
 #[derive(Debug, PartialEq, Hash, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
 #[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum FontFamily {
     #[default]

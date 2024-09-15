@@ -10,7 +10,7 @@ use crate::header::RtfHeader;
 use crate::lexer::Lexer;
 use crate::parser::{Parser, StyleBlock};
 
-// Expose to WASM
+// Interface to WASM to be used in JS
 #[wasm_bindgen]
 pub fn parse_rtf(rtf: String) -> RtfDocument {
     return RtfDocument::try_from(rtf).unwrap()
@@ -75,8 +75,6 @@ impl RtfDocument {
 pub(crate) mod tests {
     use super::*;
     use crate::document::RtfDocument;
-
-    // Todo : introduce wasm tests
 
     #[test]
     fn get_text_from_document() {

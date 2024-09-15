@@ -4,6 +4,7 @@ use std::{fmt, mem};
 use derivative::Derivative;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Color, ColorRef, ColorTable, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
@@ -22,6 +23,7 @@ macro_rules! header_control_word {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen(getter_with_clone)]
 pub struct StyleBlock {
     pub painter: Painter,
     pub paragraph: Paragraph,
@@ -31,6 +33,7 @@ pub struct StyleBlock {
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derivative(Default)]
+#[wasm_bindgen]
 pub struct Painter {
     pub color_ref: ColorRef,
     pub font_ref: FontRef,
@@ -183,9 +186,9 @@ impl<'a> Parser<'a> {
                         ControlWord::Plain              => *current_painter = Painter::default(), // Reset the painter
                         ControlWord::ParDefTab          => paragraph.tab_width = property.get_value(),
                         ControlWord::LeftAligned
-                        | ControlWord::RightAligned
-                        | ControlWord::Center
-                        | ControlWord::Justify      => paragraph.alignment = Alignment::from(control_word),
+                            | ControlWord::RightAligned
+                            | ControlWord::Center
+                            | ControlWord::Justify      => paragraph.alignment = Alignment::from(control_word),
                         ControlWord::SpaceBefore        => paragraph.spacing.before = property.get_value(),
                         ControlWord::SpaceAfter         => paragraph.spacing.after = property.get_value(),
                         ControlWord::SpaceBetweenLine   => paragraph.spacing.between_line = SpaceBetweenLine::from(property.get_value()),
