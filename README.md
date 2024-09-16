@@ -164,23 +164,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
-## WASM
+# WASM
 This crate also compiles to WASM, and exposes the function `parse_rtf` to JS & TS, with proper type declarations.
 The TS API is the same as the Rust one, except for the `Lexer` & the `Parser`. Due to performance reasons, those can't be exposed directly in JS and are internally used in WASM. 
 
 ## With NPM 
 To use this module with NPM, you have to import it and initialize it :
 ```ts
-import init, { parse_rtf } from 'rtf-parser-wasm';
+import init, { parse_rtf } from 'rtf-parser-wasm'
 init().then(() => {
-    let document = parse_rtf("<rtf>");
-});
+    let document = parse_rtf("<rtf>")
+})
 ```
 
 ## Without NPM
 You have to downlod the `pkg/` folder, and then import the `rtf_parser.js` script.
 ```ts 
-import init, { parse_rtf } from '../pkg/rtf_parser.js';
+import init, { parse_rtf } from '../pkg/rtf_parser.js'
 ```
 A complete example is provided in `examples/wasm/`.
 
@@ -193,7 +193,7 @@ export default defineConfig({
     optimizeDeps: {
         exclude: ["rtf-parser-wasm"]
     }
-});
+})
 ``` 
 
 ## Known limitations
