@@ -4,6 +4,7 @@ use std::{fmt, mem};
 use derivative::Derivative;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::document::RtfDocument;

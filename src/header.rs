@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
 use tsify::Tsify;
 use wasm_bindgen::prelude::wasm_bindgen;
 
