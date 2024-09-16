@@ -5,12 +5,21 @@ use std::io::Read;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use wasm_bindgen::prelude::wasm_bindgen;
+
 use crate::header::RtfHeader;
 use crate::lexer::Lexer;
 use crate::parser::{Parser, StyleBlock};
 
+// Interface to WASM to be used in JS
+#[wasm_bindgen]
+pub fn parse_rtf(rtf: String) -> RtfDocument {
+    return RtfDocument::try_from(rtf).unwrap()
+}
+
 #[derive(Debug, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen(getter_with_clone)]
 pub struct RtfDocument {
     pub header: RtfHeader,
     pub body: Vec<StyleBlock>,
@@ -48,7 +57,7 @@ impl TryFrom<&mut fs::File> for RtfDocument {
 
 impl RtfDocument {
     /// Create an `RtfDocument` from a rtf file path
-    pub fn from_filepath(filename: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn from_filepath(filename: &str) -> Result<RtfDocument, Box<dyn Error>> {
         let file_content = fs::read_to_string(filename)?;
         return Self::try_from(file_content);
     }

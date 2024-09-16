@@ -1,7 +1,8 @@
 # rtf-parser
 [![Crates.io](https://img.shields.io/crates/v/rtf-parser.svg?style=flat-square&color=orange)](https://crates.io/crates/rtf-parser)
 ![Crates.io License](https://img.shields.io/crates/l/rtf-parser?style=flat-square)
-[![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
+[![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?label=Crates.io&style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
+[![NPM Total Downloads](https://img.shields.io/npm/d18m/rtf-parser-wasm?label=NPM)](https://www.npmjs.com/package/rtf-parser-wasm)
 [![docs.rs](https://img.shields.io/docsrs/rtf-parser?style=flat-square)](https://docs.rs/rtf-parser)
 
 A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies. 
@@ -156,6 +157,38 @@ fn main() -> Result<(), Box<dyn Error>> {
     return Ok(());
 }
 ```
+
+## WASM
+This crate also compiles to WASM, and exposes the function `parse_rtf` to JS & TS, with proper type declarations.
+The TS API is the same as the Rust one, except for the `Lexer` & the `Parser`. Due to performance reasons, those can't be exposed directly in JS and are internally used in WASM. 
+
+## With NPM 
+To use this module with NPM, you have to import it and initialize it :
+```ts
+import init, { parse_rtf } from 'rtf-parser-wasm';
+init().then(() => {
+    let document = parse_rtf("<rtf>");
+});
+```
+
+## Without NPM
+You have to downlod the `pkg/` folder, and then import the `rtf_parser.js` script.
+```ts 
+import init, { parse_rtf } from '../pkg/rtf_parser.js';
+```
+A complete example is provided in `examples/wasm/`.
+
+### Vite
+If you are using Vite, don't forget to add this snippet to your `vite.config.js`, for the WASM to be served correctly :
+```ts 
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+    optimizeDeps: {
+        exclude: ["rtf-parser-wasm"]
+    }
+});
+``` 
 
 ## Known limitations
 For now, the `\bin` keyword is not taken into account. As its content is text in binary format, it can mess with the lexing algorithm, and crash the program. 

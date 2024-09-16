@@ -9,6 +9,9 @@ keywords = ["rtf", "rich", "text", "format", "parser"]
 categories = ["parsing", "parser-implementations"]
 exclude = ["*.rtf", ".idea"]
 
+[lib]
+crate-type = ["cdylib"]
+
 [profile.release]
 lto = true
 opt-level = 3
@@ -21,3 +24,9 @@ debug = true
 [dependencies]
 derivative = "2.2.0"
 serde = { version = "1.0", optional = true, features = ["derive"] }
+
+#[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+tsify = "0.4.5"
+
+

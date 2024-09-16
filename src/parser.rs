@@ -4,6 +4,8 @@ use std::{fmt, mem};
 use derivative::Derivative;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::document::RtfDocument;
 use crate::header::{CharacterSet, Color, ColorRef, ColorTable, Font, FontFamily, FontRef, FontTable, RtfHeader, StyleSheet};
@@ -22,6 +24,7 @@ macro_rules! header_control_word {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[wasm_bindgen(getter_with_clone)]
 pub struct StyleBlock {
     pub painter: Painter,
     pub paragraph: Paragraph,
@@ -31,6 +34,7 @@ pub struct StyleBlock {
 #[derive(Derivative, Debug, Clone, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derivative(Default)]
+#[wasm_bindgen]
 pub struct Painter {
     pub color_ref: ColorRef,
     pub font_ref: FontRef,
@@ -129,7 +133,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-                                                   // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
+        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
         // Init the state of the docuement. the stack is used to keep track of the different scope changes.
         let mut state_stack: Vec<ParserState> = vec![ParserState::default()];
@@ -682,7 +686,7 @@ pub mod tests {
             {\*\expandedcolortbl;;}
             \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
             \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
-            
+
             \f0\fs24 \cf0 \ul \ulc0 a\ulnone A}"#;
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
