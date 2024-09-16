@@ -21,7 +21,7 @@ pub struct Paragraph {
 /// Alignement of a paragraph (left, right, center, justify)
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
-#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(all(feature = "serde"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum Alignment {
     #[default]
     LeftAligned, // \ql
@@ -55,7 +55,7 @@ pub struct Spacing {
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
-#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(all(feature = "serde"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum SpaceBetweenLine {
     Value(i32),
     #[default]

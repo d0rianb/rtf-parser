@@ -38,7 +38,7 @@ pub struct Style {
 /// Information about the document, including references to fonts & styles
 #[derive(Default, Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
-#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(all(feature = "serde"), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct RtfHeader {
     pub character_set: CharacterSet,
     pub font_table: FontTable,
@@ -90,7 +90,7 @@ impl CharacterSet {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Hash, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize, Tsify))]
-#[cfg_attr(all(feature = "serde", target_arch = "wasm32"), tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(all(feature = "serde"), tsify(into_wasm_abi, from_wasm_abi))]
 pub enum FontFamily {
     #[default]
     Nil,

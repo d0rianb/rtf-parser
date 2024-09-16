@@ -62,7 +62,7 @@ impl RtfDocument {
         return Self::try_from(file_content);
     }
 
-    /// Get the raw text of an RTF docuement
+    /// Get the raw text of an RTF document
     pub fn get_text(&self) -> String {
         let mut result = String::new();
         for style_block in &self.body {

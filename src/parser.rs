@@ -738,7 +738,7 @@ pub mod tests {
     fn body_starts_with_a_group() {
         let rtf = r"{\rtf1\ansi\deff0{\fonttbl {\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset2 Symbol;}}{\colortbl ;}{\pard \u21435  \sb70\par}}";
         let tokens = Lexer::scan(rtf).unwrap();
-        let document = Parser::new(tokens).parse().unwrap();
+        let _document = Parser::new(tokens).parse().unwrap();
     }
 
     #[test]
