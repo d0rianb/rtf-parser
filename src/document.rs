@@ -15,8 +15,7 @@ pub fn parse_rtf(rtf: String) -> RtfDocument {
     return RtfDocument::try_from(rtf).unwrap()
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct RtfDocument {
     pub header: RtfHeader,
