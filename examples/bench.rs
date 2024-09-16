@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+extern crate rtf_parser;
 use rtf_parser::{Lexer, Parser, StyleSheet};
 
 fn main() {

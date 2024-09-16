@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::{fmt, mem};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 use derivative::Derivative;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::document::RtfDocument;
@@ -22,8 +20,7 @@ macro_rules! header_control_word {
     };
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct StyleBlock {
     pub painter: Painter,
@@ -31,8 +28,7 @@ pub struct StyleBlock {
     pub text: String,
 }
 
-#[derive(Derivative, Debug, Clone, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Derivative, Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
 #[derivative(Default)]
 #[wasm_bindgen]
 pub struct Painter {

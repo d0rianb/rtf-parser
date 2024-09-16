@@ -2,9 +2,7 @@ use std::error::Error;
 use std::fs;
 use std::io::Read;
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::header::RtfHeader;
