@@ -2,7 +2,7 @@
 [![Crates.io](https://img.shields.io/crates/v/rtf-parser.svg?style=flat-square&color=orange)](https://crates.io/crates/rtf-parser)
 ![Crates.io License](https://img.shields.io/crates/l/rtf-parser?style=flat-square)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?label=Crates.io%20Downloads&style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
-[![NPM Total Downloads](https://img.shields.io/npm/d18m/rtf-parser-wasm?label=NPM%20Downloads)](https://www.npmjs.com/package/rtf-parser-wasm)
+[![NPM Total Downloads](https://img.shields.io/npm/d18m/rtf-parser-wasm?label=NPM%20Downloads&style=flat-square&color=red)](https://www.npmjs.com/package/rtf-parser-wasm)
 [![docs.rs](https://img.shields.io/docsrs/rtf-parser?style=flat-square)](https://docs.rs/rtf-parser)
 
 A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies. 
