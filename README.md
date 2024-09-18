@@ -1,8 +1,8 @@
 # rtf-parser
 [![Crates.io](https://img.shields.io/crates/v/rtf-parser.svg?style=flat-square&color=orange)](https://crates.io/crates/rtf-parser)
 ![Crates.io License](https://img.shields.io/crates/l/rtf-parser?style=flat-square)
-[![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?label=Crates.io&style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
-[![NPM Total Downloads](https://img.shields.io/npm/d18m/rtf-parser-wasm?label=NPM)](https://www.npmjs.com/package/rtf-parser-wasm)
+[![Crates.io Total Downloads](https://img.shields.io/crates/d/rtf-parser?label=Crates.io%2Downloads&style=flat-square&color=violet)](https://crates.io/crates/rtf-parser)
+[![NPM Total Downloads](https://img.shields.io/npm/d18m/rtf-parser-wasm?label=NPM%2Downloads)](https://www.npmjs.com/package/rtf-parser-wasm)
 [![docs.rs](https://img.shields.io/docsrs/rtf-parser?style=flat-square)](https://docs.rs/rtf-parser)
 
 A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies. 
@@ -16,7 +16,13 @@ This library can be installed using cargo with the CLI :
 ```bash
  cargo add rtf-parser
  ```
-Or adding `rtf-parser = "<last-version>"` under **[dependencies]** in your `Cargo.toml`.
+Or add `rtf-parser = "<last-version>"` under **[dependencies]** in your `Cargo.toml`.
+
+If you want to use the WASM version in JavaScript, you can add this module via NPM : 
+```node
+npm i rtf-parser-wasm
+```
+Or add `"rtf-parser-wasm": "<last-version>"` in the  **dependencies** in your `package.json`.
 
 ## Design
 The library is split into 2 main components:
