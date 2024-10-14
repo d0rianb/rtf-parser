@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::{fmt, mem};
 
-use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -28,13 +27,11 @@ pub struct StyleBlock {
     pub text: String,
 }
 
-#[derive(Derivative, Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
-#[derivative(Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
 #[wasm_bindgen]
 pub struct Painter {
     pub color_ref: ColorRef,
     pub font_ref: FontRef,
-    #[derivative(Default(value = "12"))]
     pub font_size: u16,
     pub bold: bool,
     pub italic: bool,
@@ -43,6 +40,23 @@ pub struct Painter {
     pub subscript: bool,
     pub smallcaps: bool,
     pub strike: bool,
+}
+
+impl Default for Painter {
+    fn default() -> Self {
+        Self {
+            color_ref: Default::default(),
+            font_ref: Default::default(),
+            font_size: 12,
+            bold: Default::default(),
+            italic: Default::default(),
+            underline: Default::default(),
+            superscript: Default::default(),
+            subscript: Default::default(),
+            smallcaps: Default::default(),
+            strike: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -78,13 +92,21 @@ impl fmt::Display for ParserError {
 }
 
 // This state keeps track of each value that depends on the scope nesting
-#[derive(Derivative, Debug, Clone, PartialEq, Hash)]
-#[derivative(Default)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 struct ParserState {
     pub painter: Painter,
     pub paragraph: Paragraph,
-    #[derivative(Default(value = "1"))]
     pub unicode_ignore_count: i32,
+}
+
+impl Default for ParserState {
+    fn default() -> Self {
+        Self {
+            painter: Default::default(),
+            paragraph: Default::default(),
+            unicode_ignore_count: 1,
+        }
+    }
 }
 
 pub struct Parser<'a> {
@@ -129,7 +151,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
-        // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
+                                                   // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
         // Init the state of the docuement. the stack is used to keep track of the different scope changes.
         let mut state_stack: Vec<ParserState> = vec![ParserState::default()];

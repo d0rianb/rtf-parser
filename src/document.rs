@@ -12,7 +12,7 @@ use crate::parser::{Parser, StyleBlock};
 // Interface to WASM to be used in JS
 #[wasm_bindgen]
 pub fn parse_rtf(rtf: String) -> RtfDocument {
-    return RtfDocument::try_from(rtf).unwrap()
+    return RtfDocument::try_from(rtf).unwrap();
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]

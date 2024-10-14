@@ -1,5 +1,4 @@
 /// Define the paragraph related structs and enums
-
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use wasm_bindgen::prelude::wasm_bindgen;
