@@ -311,4 +311,25 @@ if (a == b) \{\
             [OpeningBracket, PlainText("je suis une b"), ControlSymbol((Unicode, Value(234))), PlainText("te"), ClosingBracket,]
         );
     }
+
+    #[test]
+    fn should_handle_whitspace_group() {
+        let rtf = r"{\cf1  }"; // two whitespaces : one should be ignored, the other should be treated as plain text
+        let tokens = Lexer::scan(rtf).unwrap();
+        assert_eq!(
+            tokens,
+            [OpeningBracket, ControlSymbol((ColorNumber, Value(1))), PlainText(" "), ClosingBracket]
+        );
+    }
+
+    #[test]
+    fn should_handle_google_docs_files() {
+        use crate::include_test_file;
+        let rtf = include_test_file!("google-docs.rtf");
+        let tokens = Lexer::scan(rtf).unwrap();
+        assert_eq!(
+            tokens,
+            []
+        );
+    }
 }
