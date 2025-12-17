@@ -140,6 +140,17 @@ pub enum ControlWord<'a> {
     ColorGreen,
     ColorBlue,
 
+    // Special characters
+    Emdash,
+    Endash,
+    Bullet,
+    LeftSingleQuote,
+    RightSingleQuote,
+    LeftDoubleQuote,
+    RightDoubleQuote,
+    Tab,
+    Line,
+
     Unknown(&'a str),
 }
 
@@ -223,6 +234,16 @@ impl<'a> ControlWord<'a> {
             r"\red"           => ControlWord::ColorRed,
             r"\green"         => ControlWord::ColorGreen,
             r"\blue"          => ControlWord::ColorBlue,
+            // Special characters
+            r"\emdash"        => ControlWord::Emdash,
+            r"\endash"        => ControlWord::Endash,
+            r"\bullet"        => ControlWord::Bullet,
+            r"\lquote"        => ControlWord::LeftSingleQuote,
+            r"\rquote"        => ControlWord::RightSingleQuote,
+            r"\ldblquote"     => ControlWord::LeftDoubleQuote,
+            r"\rdblquote"     => ControlWord::RightDoubleQuote,
+            r"\tab"           => ControlWord::Tab,
+            r"\line"          => ControlWord::Line,
             // Unknown
             _                 => ControlWord::Unknown(prefix),
         };
