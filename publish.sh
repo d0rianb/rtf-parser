@@ -14,8 +14,9 @@ echo "Build WASM released module"
 
 #echo "Commiting the last changes"
 git add .
-git commit -m "Publishing v$version"
-git push origin master
+git commit -m "Release $version"
+git tag -a "$version" -m "Release $version"
+git push origin master "$version"
 
 echo "Publish to NPM"
 # Rename from 'rtf-parser' to 'rtf-parser-wasm' for NPM
