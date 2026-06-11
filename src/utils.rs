@@ -17,8 +17,7 @@ impl StrUtils for str {
     }
 
     fn is_only_whitespace(&self) -> bool {
-        // TODO
-        false
+        self.chars().all(|c| c.is_ascii_whitespace())
     }
 }
 

@@ -119,9 +119,8 @@ impl Lexer {
                     let mut ret = vec![Token::ControlSymbol(control_word)];
                     recursive_tokenize!(tail, ret);
 
-                    // \u1234 \u1234 is ok, but \u1234  \u1234 is lost a space, \u1234   \u1234 lost two spaces, and so on
-                    // \u1234  1 -> No need to walk in here, it will enter plain text
-                    if control_word.0 == ControlWord::Unicode && tail.len() > 0 && tail.trim() == "" {
+                    // The first whitespace delimits the control word, the remaining ones are plain text
+                    if tail.len() > 0 && tail.is_only_whitespace() {
                         ret.push(Token::PlainText(tail));
                     }
                     return Ok(ret);
@@ -338,11 +337,4 @@ if (a == b) \{\
         assert_eq!(tokens, [OpeningBracket, ControlSymbol((ColorNumber, Value(1))), PlainText(" "), ClosingBracket]);
     }
 
-    #[test]
-    fn should_handle_google_docs_files() {
-        use crate::include_test_file;
-        let rtf = include_test_file!("google-docs.rtf");
-        let tokens = Lexer::scan(rtf).unwrap();
-        assert_eq!(tokens, []);
-    }
 }

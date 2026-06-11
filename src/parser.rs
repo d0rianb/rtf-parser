@@ -626,6 +626,14 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_google_docs_whitespaces() {
+        let rtf_content = include_test_file!("google-docs.rtf");
+        let tokens = Lexer::scan(rtf_content).unwrap();
+        let document = Parser::new(tokens).parse().unwrap();
+        assert_eq!(document.get_text(), "Lorem ipsum odor amet");
+    }
+
+    #[test]
     fn parse_image_data() {
         // Try to parse without error
         let rtf_content = include_test_file!("file-with-image.rtf");
