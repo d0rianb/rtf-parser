@@ -313,13 +313,20 @@ if (a == b) \{\
     }
 
     #[test]
-    fn should_handle_whitspace_group() {
-        let rtf = r"{\cf1  }"; // two whitespaces : one should be ignored, the other should be treated as plain text
+    fn should_lex_unicode() {
+        let rtf = r#"{\u21834  \u21834 }"#;
         let tokens = Lexer::scan(rtf).unwrap();
         assert_eq!(
             tokens,
-            [OpeningBracket, ControlSymbol((ColorNumber, Value(1))), PlainText(" "), ClosingBracket]
+            vec![OpeningBracket, ControlSymbol((Unicode, Value(21834))), PlainText(" "), ControlSymbol((Unicode, Value(21834))), ClosingBracket]
         );
+    }
+
+    #[test]
+    fn should_handle_whitespace_group() {
+        let rtf = r"{\cf1  }"; // two whitespaces : one should be ignored, the other should be treated as plain text
+        let tokens = Lexer::scan(rtf).unwrap();
+        assert_eq!(tokens, [OpeningBracket, ControlSymbol((ColorNumber, Value(1))), PlainText(" "), ClosingBracket]);
     }
 
     #[test]
@@ -327,9 +334,6 @@ if (a == b) \{\
         use crate::include_test_file;
         let rtf = include_test_file!("google-docs.rtf");
         let tokens = Lexer::scan(rtf).unwrap();
-        assert_eq!(
-            tokens,
-            []
-        );
+        assert_eq!(tokens, []);
     }
 }

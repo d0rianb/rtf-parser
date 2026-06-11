@@ -25,6 +25,10 @@ debug = true
 default = ["jsbindings"]
 jsbindings = ["dep:wasm-bindgen", "dep:tsify"]
 
+[lints.clippy]
+needless_return = "allow"
+
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 
