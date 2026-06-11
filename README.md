@@ -7,7 +7,7 @@
 
 A safe Rust RTF parser &amp; lexer library designed for speed and memory efficiency, with no external dependencies. 
 
-It implements the last version of the RTF specification (1.9), with modern UTF-16 unicode support. 
+It implements the last version of the RTF specification (1.9), with modern UTF-16 unicode support, including special characters (emdash, endash, quotes, etc)
 
 The official documentation is available at [docs.rs/rtf-parser](https://docs.rs/rtf-parser).
 
