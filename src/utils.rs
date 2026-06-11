@@ -8,27 +8,12 @@ impl StrUtils for str {
     // Split the string at the first whitespace
     // ex : split_first_whitespace("\b I'm a bold string") -> ("\b", "I'm a bold string")
     fn split_first_whitespace(&self) -> (&str, &str) {
-        let mut first_whitespace_index = 0;
-
-        let len = self.len();
-        let bytes = self.as_bytes();
-        let mut i = 0;
-        // Faster than an iterator
-        while i < len {
-            let c = bytes[i] as char;
-            i += 1;
-
-            if c.is_whitespace() {
-                break;
-            } else {
-                first_whitespace_index += 1;
+        for (i, c) in self.char_indices() {
+            if c.is_ascii_whitespace() {
+                return (&self[..i], &self[i + c.len_utf8()..]);
             }
         }
-        if first_whitespace_index > 0 && first_whitespace_index != self.len() {
-            return (&self[0..first_whitespace_index], &self[first_whitespace_index + 1..]);
-        } else {
-            return (self, "");
-        }
+        return (self, "");
     }
 
     fn is_only_whitespace(&self) -> bool {
@@ -82,5 +67,12 @@ mod test {
         let text = r"\b I'm a bold string";
         let split = text.split_first_whitespace();
         assert_eq!(split, (r"\b", r"I'm a bold string"));
+    }
+
+    #[test]
+    fn test_split_first_whitespace_with_utf8() {
+        let text = "\\a\u{a0}";
+        let split = text.split_first_whitespace();
+        assert_eq!(split, (text, ""));
     }
 }

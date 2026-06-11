@@ -45,17 +45,9 @@ impl Lexer {
 
         let mut tokens: Vec<Token> = vec![];
         let mut slice_start_index = 0;
-        let mut current_index = 0;
         let mut previous_char = ' ';
 
-        // This is faster than using an iterator
-        let len = src.len();
-        let bytes = src.as_bytes();
-        let mut i = 0;
-        while i < len {
-            let c = bytes[i] as char;
-            i += 1;
-
+        for (current_index, c) in src.char_indices() {
             match c {
                 // TODO: Handle char over code 127 for escaped chars
                 // Handle Escaped chars : "\" + any charcode below 127
@@ -74,12 +66,11 @@ impl Lexer {
                 // Others chars
                 _ => {}
             }
-            current_index += 1;
             previous_char = c;
         }
         // Manage last token (should always be "}")
-        if slice_start_index < current_index {
-            let slice = &src[slice_start_index..current_index];
+        if slice_start_index < src.len() {
+            let slice = &src[slice_start_index..];
             if slice != "}" {
                 return Err(LexerError::InvalidLastChar);
             }
@@ -102,10 +93,10 @@ impl Lexer {
                 '\'' => {
                     // Escaped unicode in hex value : \'f0
                     let tail = slice.get(1..).unwrap_or("");
-                    if tail.len() < 2 {
+                    let Some(hex) = tail.get(1..3) else {
                         return Err(LexerError::InvalidUnicode(tail.into()));
-                    }
-                    let byte = u8::from_str_radix(&tail[1..3], 16)?; // f0
+                    };
+                    let byte = u8::from_str_radix(hex, 16)?; // f0
                     let mut ret = vec![Token::ControlSymbol((ControlWord::Unicode, Property::Value(byte as i32)))];
                     recursive_tokenize!(&tail[3..], ret);
                     return Ok(ret);
@@ -310,6 +301,24 @@ if (a == b) \{\
             tokens,
             [OpeningBracket, PlainText("je suis une b"), ControlSymbol((Unicode, Value(234))), PlainText("te"), ClosingBracket,]
         );
+    }
+
+    #[test]
+    fn should_handle_utf8_plain_text() {
+        let tokens = Lexer::scan(r"{Привет}").unwrap();
+        assert_eq!(tokens, [OpeningBracket, PlainText("Привет"), ClosingBracket]);
+    }
+
+    #[test]
+    fn should_not_panic_on_invalid_unicode() {
+        let rtf = String::from_utf8_lossy(&[92u8, 39, 0, 10, 0]);
+        assert!(Lexer::scan(&rtf).is_err());
+    }
+
+    #[test]
+    fn should_not_panic_on_utf8_control_word() {
+        let rtf = String::from_utf8_lossy(&[92u8, 97, 194, 160, 125]);
+        assert!(Lexer::scan(&rtf).is_ok());
     }
 
     #[test]
