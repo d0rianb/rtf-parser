@@ -19,8 +19,6 @@ git tag -a "$version" -m "Release $version"
 git push origin master "$version"
 
 echo "Publish to NPM"
-# Rename from 'rtf-parser' to 'rtf-parser-wasm' for NPM
-sed -i '' 's/"name": "[^"]*"/"name": "rtf-parser-wasm"/' pkg/package.json
 wasm-pack publish
 
 echo "Publish to Cargo"
