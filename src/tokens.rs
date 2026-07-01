@@ -91,7 +91,14 @@ impl Property {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ControlWord<'a> {
     Rtf,
-    Ansi,
+
+    // Character Set
+    Ansi, // default
+    Mac,  // Apple Macintosh
+    Pc,   // IBM PC code page 437
+    Pca,  // BM PC code page 850
+    AnsiCpg, // ANSI code page used to perform the Unicode to ANSI conversion
+
 
     Unicode,
     UnicodeIgnoreCount,
@@ -187,7 +194,12 @@ impl<'a> ControlWord<'a> {
         #[rustfmt::skip]
         let control_word = match prefix {
             r"\rtf"           => ControlWord::Rtf,
+            // Character set
             r"\ansi"          => ControlWord::Ansi,
+            r"\mac"           => ControlWord::Mac,
+            r"\pc"            => ControlWord::Pc,
+            r"\pca"           => ControlWord::Pca,
+            r"\ansicpg"       => ControlWord::AnsiCpg,
             // Unicode
             r"\u"             => ControlWord::Unicode,
             r"\uc"            => ControlWord::UnicodeIgnoreCount,
@@ -258,7 +270,9 @@ mod tests {
     #[test]
     fn control_word_from_input_test() {
         let input = r"\rtf1";
-        assert_eq!(ControlWord::from(input).unwrap(), (ControlWord::Rtf, Property::Value(1)))
+        assert_eq!(ControlWord::from(input).unwrap(), (ControlWord::Rtf, Property::Value(1)));
+        let cpg_input = r"\ansicpg1252";
+        assert_eq!(ControlWord::from(cpg_input).unwrap(), (ControlWord::AnsiCpg, Property::Value(1252)))
     }
 
     #[test]

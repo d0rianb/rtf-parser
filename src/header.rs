@@ -39,6 +39,7 @@ pub struct Style {
 #[cfg_attr(feature = "jsbindings", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct RtfHeader {
     pub character_set: CharacterSet,
+    pub code_page: Option<u16>,
     pub font_table: FontTable,
     pub color_table: ColorTable,
     pub stylesheet: StyleSheet,
@@ -66,17 +67,18 @@ pub struct Color {
 pub enum CharacterSet {
     #[default]
     Ansi,
-    Mac,
-    Pc,
-    Pca,
-    Ansicpg(u16),
+    Mac, // Apple Macintosh
+    Pc,  // IBM PC code page 437
+    Pca, // IBM PC code page 850
 }
 
 impl CharacterSet {
     pub fn from(token: &Token) -> Option<Self> {
         match token {
             Token::ControlSymbol((ControlWord::Ansi, _)) => Some(Self::Ansi),
-            // TODO: implement the rest
+            Token::ControlSymbol((ControlWord::Mac, _)) => Some(Self::Mac),
+            Token::ControlSymbol((ControlWord::Pc, _)) => Some(Self::Pc),
+            Token::ControlSymbol((ControlWord::Pca, _)) => Some(Self::Pca),
             _ => None,
         }
     }

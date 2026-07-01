@@ -397,8 +397,15 @@ impl<'a> Parser<'a> {
                 }
                 // Check and consume token
                 (token, _) => {
-                    if let Some(charset) = CharacterSet::from(token) {
-                        header.character_set = charset;
+                    match token {
+                        Token::ControlSymbol((ControlWord::AnsiCpg, code_page)) => {
+                            header.code_page = Some(code_page.get_value_as::<u16>()?);
+                        }
+                        _ => {
+                            if let Some(character_set) = CharacterSet::from(token) {
+                                header.character_set = character_set;
+                            }
+                        }
                     }
                     self.cursor += 1;
                 }
@@ -497,12 +504,13 @@ pub mod tests {
 
     #[test]
     fn parser_header() {
-        let tokens = Lexer::scan(r#"{ \rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#).unwrap();
+        let tokens = Lexer::scan(r#"{ \rtf1\ansi\ansicpg1252{\fonttbl\f0\fswiss Helvetica;}\f0\pard Voici du texte en {\b gras}.\par }"#).unwrap();
         let doc = Parser::new(tokens).parse().unwrap();
         assert_eq!(
             doc.header,
             RtfHeader {
                 character_set: Ansi,
+                code_page: Some(1252),
                 font_table: FontTable::from([(
                     0,
                     Font {
@@ -562,6 +570,7 @@ pub mod tests {
             doc.header,
             RtfHeader {
                 character_set: Ansi,
+                code_page: Some(1252),
                 font_table: FontTable::from([
                     (
                         0,

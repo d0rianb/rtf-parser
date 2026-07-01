@@ -1,6 +1,6 @@
 // RTF parser for Text Editor
 // This library supports RTF version 1.9.1
-// Specification is available here : https://dokumen.tips/documents/rtf-specification.html
+// Specification is available here : https://dokumen.tips/documents/rtf-specification.html and https://github.com/GoodNotes/tree-sitter-rtf/blob/main/specs/rtf-specs-1.9.1.pdf
 // Explanations on specification here : https://www.oreilly.com/library/view/rtf-pocket-guide/9781449302047/ch01.html
 
 #![allow(irrefutable_let_patterns)]
