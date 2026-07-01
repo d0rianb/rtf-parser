@@ -25,6 +25,8 @@ macro_rules! header_control_word {
 pub struct StyleBlock {
     pub painter: Painter,
     pub paragraph: Paragraph,
+    #[serde(default)]
+    pub hyperlink: Option<String>,
     pub text: String,
 }
 
@@ -110,6 +112,12 @@ impl Default for ParserState {
     }
 }
 
+#[derive(Debug, Default)]
+struct Field {
+    instruction: String,
+    result: Vec<StyleBlock>,
+}
+
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
     parsed_item: Vec<bool>,
@@ -150,12 +158,16 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Result<RtfDocument, ParserError> {
+        self.parse_with_state(ParserState::default())
+    }
+
+    fn parse_with_state(&mut self, initial_state: ParserState) -> Result<RtfDocument, ParserError> {
         self.check_document_validity()?;
         let mut document = RtfDocument::default(); // Init empty document
                                                    // Traverse the document and consume the header groups (FontTable, StyleSheet, etc ...)
         document.header = self.parse_header()?;
         // Init the state of the docuement. the stack is used to keep track of the different scope changes.
-        let mut state_stack: Vec<ParserState> = vec![ParserState::default()];
+        let mut state_stack: Vec<ParserState> = vec![initial_state];
         // Parse the body
         let len = self.tokens.len();
         let mut i = 0;
@@ -170,6 +182,16 @@ impl<'a> Parser<'a> {
 
             match token {
                 Token::OpeningBracket => {
+                    if self.group_starts_with(i, ControlWord::Field) {
+                        let Some(current_state) = state_stack.last() else {
+                            return Err(ParserError::MalformedPainterStack);
+                        };
+                        let (field, next_index) = self.parse_field(i, current_state)?;
+                        Self::append_blocks(&mut document.body, field.result);
+                        i = next_index;
+                        continue;
+                    }
+
                     if let Some(last_state) = state_stack.last() {
                         state_stack.push(last_state.clone()); // Inherit from the last state properties
                     } else {
@@ -266,9 +288,7 @@ impl<'a> Parser<'a> {
                 }
                 Token::PlainText(text) => Self::add_text_to_document(*text, &state_stack, &mut document)?,
                 Token::CRLF => Self::add_text_to_document("\n", &state_stack, &mut document)?,
-                Token::IgnorableDestination => {
-                    return Err(ParserError::IgnorableDestinationParsingError);
-                }
+                Token::IgnorableDestination => return Err(ParserError::IgnorableDestinationParsingError),
                 Token::Empty => return Err(ParserError::ParseEmptyToken),
             };
             i += 1;
@@ -276,25 +296,187 @@ impl<'a> Parser<'a> {
         return Ok(document);
     }
 
+    fn parse_hyperlink_instruction(instruction: &str) -> Option<String> {
+        let instruction = instruction.trim();
+        let keyword_end = instruction.find(char::is_whitespace).unwrap_or(instruction.len());
+        if !instruction[..keyword_end].eq_ignore_ascii_case("HYPERLINK") {
+            return None;
+        }
+
+        let arguments = instruction[keyword_end..].trim_start();
+        if let Some(quoted) = arguments.strip_prefix('"') {
+            let end = quoted.find('"')?;
+            return Some(quoted[..end].to_owned());
+        }
+
+        arguments.split_whitespace().next().map(str::to_owned)
+    }
+
+    fn group_starts_with(&self, start: usize, expected: ControlWord<'_>) -> bool {
+        matches!(self.tokens.get(start), Some(Token::OpeningBracket))
+            && matches!(
+                self.tokens.get(start + 1),
+                Some(Token::ControlSymbol((control_word, _))) if *control_word == expected
+            )
+    }
+
+    fn group_is_field_instruction(&self, start: usize) -> bool {
+        matches!(self.tokens.get(start), Some(Token::OpeningBracket))
+            && matches!(self.tokens.get(start + 1), Some(Token::IgnorableDestination))
+            && matches!(
+                self.tokens.get(start + 2),
+                Some(Token::ControlSymbol((ControlWord::FieldInstruction, _)))
+            )
+    }
+
+    fn group_end(&self, start: usize) -> Result<usize, ParserError> {
+        if !matches!(self.tokens.get(start), Some(Token::OpeningBracket)) {
+            return Err(ParserError::InvalidToken(format!("Expected an opening bracket at token {start}")));
+        }
+
+        let mut depth = 0;
+        for cursor in start..self.tokens.len() {
+            match &self.tokens[cursor] {
+                Token::OpeningBracket => depth += 1,
+                Token::ClosingBracket => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok(cursor + 1);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Err(ParserError::NoMoreToken)
+    }
+
+    fn parse_field(&self, start: usize, inherited_state: &ParserState) -> Result<(Field, usize), ParserError> {
+        if !self.group_starts_with(start, ControlWord::Field) {
+            return Err(ParserError::InvalidToken(format!("Expected a field group at token {start}")));
+        }
+
+        let mut cursor = start + 2;
+        let mut field = Field::default();
+        let mut has_instruction = false;
+        let mut has_result = false;
+
+        while cursor < self.tokens.len() {
+            match &self.tokens[cursor] {
+                Token::OpeningBracket if self.group_is_field_instruction(cursor) => {
+                    if has_instruction || has_result {
+                        return Err(ParserError::InvalidToken("fldinst must appear once and before fldrslt".into()));
+                    }
+                    let (instruction, next_index) = self.parse_field_instruction(cursor)?;
+                    field.instruction = instruction;
+                    has_instruction = true;
+                    cursor = next_index;
+                }
+                Token::OpeningBracket if self.group_starts_with(cursor, ControlWord::FieldResult) => {
+                    if !has_instruction || has_result {
+                        return Err(ParserError::InvalidToken("fldrslt must appear once and after fldinst".into()));
+                    }
+                    let hyperlink = Self::parse_hyperlink_instruction(&field.instruction);
+                    let (result, next_index) = self.parse_field_result(cursor, inherited_state, hyperlink.as_deref())?;
+                    field.result = result;
+                    has_result = true;
+                    cursor = next_index;
+                }
+                Token::OpeningBracket => cursor = self.group_end(cursor)?,
+                Token::ClosingBracket => {
+                    if !has_instruction || !has_result {
+                        return Err(ParserError::InvalidToken("A field must contain fldinst and fldrslt groups".into()));
+                    }
+                    return Ok((field, cursor + 1));
+                }
+                _ => cursor += 1,
+            }
+        }
+
+        Err(ParserError::NoMoreToken)
+    }
+
+    fn parse_field_instruction(&self, start: usize) -> Result<(String, usize), ParserError> {
+        if !self.group_is_field_instruction(start) {
+            return Err(ParserError::InvalidToken(format!("Expected a fldinst group at token {start}")));
+        }
+
+        let mut cursor = start + 3;
+        let mut instruction = String::new();
+
+        while cursor < self.tokens.len() {
+            match &self.tokens[cursor] {
+                Token::PlainText(text) => {
+                    instruction.push_str(text);
+                    cursor += 1;
+                }
+                Token::CRLF => {
+                    instruction.push(' ');
+                    cursor += 1;
+                }
+                Token::OpeningBracket => cursor = self.group_end(cursor)?,
+                Token::ClosingBracket => return Ok((instruction.trim().to_owned(), cursor + 1)),
+                _ => cursor += 1,
+            }
+        }
+
+        Err(ParserError::NoMoreToken)
+    }
+
+    fn parse_field_result(
+        &self,
+        start: usize,
+        inherited_state: &ParserState,
+        hyperlink: Option<&str>,
+    ) -> Result<(Vec<StyleBlock>, usize), ParserError> {
+        if !self.group_starts_with(start, ControlWord::FieldResult) {
+            return Err(ParserError::InvalidToken(format!("Expected a fldrslt group at token {start}")));
+        }
+
+        let end = self.group_end(start)?;
+        let tokens = self.tokens[start..end].to_vec();
+        let mut parser = Parser::new(tokens);
+        let mut result = parser.parse_with_state(inherited_state.clone())?.body;
+
+        if let Some(hyperlink) = hyperlink {
+            for block in &mut result {
+                if block.hyperlink.is_none() {
+                    block.hyperlink = Some(hyperlink.to_owned());
+                }
+            }
+        }
+
+        Ok((result, end))
+    }
+
+    fn append_blocks(output: &mut Vec<StyleBlock>, blocks: Vec<StyleBlock>) {
+        for block in blocks {
+            if let Some(last) = output.last_mut() {
+                if last.painter == block.painter && last.paragraph == block.paragraph && last.hyperlink == block.hyperlink {
+                    last.text.push_str(&block.text);
+                    continue;
+                }
+            }
+            output.push(block);
+        }
+    }
+
     fn add_text_to_document(text: &str, state_stack: &Vec<ParserState>, document: &mut RtfDocument) -> Result<(), ParserError> {
         let Some(current_state) = state_stack.last() else {
             return Err(ParserError::MalformedPainterStack);
         };
-        let current_painter = &current_state.painter;
-        let paragraph = &current_state.paragraph;
-        let last_style_group = document.body.last_mut();
-        // If the painter is the same as the previous one, merge the two block.
-        if let Some(group) = last_style_group {
-            if group.painter.eq(current_painter) && group.paragraph.eq(&paragraph) {
-                group.text.push_str(text);
+        if let Some(last) = document.body.last_mut() {
+            if last.painter == current_state.painter && last.paragraph == current_state.paragraph && last.hyperlink.is_none() {
+                last.text.push_str(text);
                 return Ok(());
             }
         }
-        // Else, push another StyleBlock on the stack with its own painter
+
         document.body.push(StyleBlock {
-            painter: current_painter.clone(),
-            paragraph: paragraph.clone(),
-            text: String::from(text),
+            painter: current_state.painter.clone(),
+            paragraph: current_state.paragraph.clone(),
+            hyperlink: None,
+            text: text.to_owned(),
         });
         return Ok(());
     }
@@ -380,8 +562,17 @@ impl<'a> Parser<'a> {
             }
             match (token, next_token) {
                 (Token::OpeningBracket, Token::IgnorableDestination) => {
-                    let ignore_group_tokens = self.consume_group();
-                    Self::parse_ignore_groups(&ignore_group_tokens);
+                    let is_field_instruction = matches!(
+                        self.get_token_at(self.cursor + 2),
+                        Some(Token::ControlSymbol((ControlWord::FieldInstruction, _)))
+                    );
+
+                    if is_field_instruction {
+                        self.cursor += 1;
+                    } else {
+                        let ignore_group_tokens = self.consume_group();
+                        Self::parse_ignore_groups(&ignore_group_tokens);
+                    }
                 }
                 (Token::OpeningBracket, header_control_word!(FontTable, None)) => {
                     let font_table_tokens = self.consume_group();
@@ -528,16 +719,19 @@ pub mod tests {
                 StyleBlock {
                     painter: Painter::default(),
                     paragraph: Default::default(),
+                    hyperlink: None,
                     text: "Voici du texte en ".into(),
                 },
                 StyleBlock {
                     painter: Painter { bold: true, ..Painter::default() },
                     paragraph: Default::default(),
+                    hyperlink: None,
                     text: "gras".into(),
                 },
                 StyleBlock {
                     painter: Painter::default(),
                     paragraph: Default::default(),
+                    hyperlink: None,
                     text: ".".into(),
                 },
             ]
@@ -629,6 +823,7 @@ pub mod tests {
             vec![StyleBlock {
                 painter: Painter { font_size: 24, ..Painter::default() },
                 paragraph: Default::default(),
+                hyperlink: None,
                 text: "\nEmpty start\n\nList test : \n - item 1\n - item 2\n - item 3\n - item 4".into(),
             },]
         );

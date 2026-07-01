@@ -113,6 +113,11 @@ pub enum ControlWord<'a> {
     FileTable,
     StyleSheet,
 
+    // Fields
+    Field,
+    FieldInstruction,
+    FieldResult,
+
     Italic,
     Bold,
     Underline,
@@ -208,6 +213,10 @@ impl<'a> ControlWord<'a> {
             r"\colortbl"      => ControlWord::ColorTable,
             r"\filetbl"       => ControlWord::FileTable,
             r"\stylesheet"    => ControlWord::StyleSheet,
+            // Fields
+            r"\field"         => ControlWord::Field,
+            r"\fldinst"       => ControlWord::FieldInstruction,
+            r"\fldrslt"       => ControlWord::FieldResult,
             // Font
             r"\fcharset"      => ControlWord::FontCharset,
             r"\f"             => ControlWord::FontNumber,
