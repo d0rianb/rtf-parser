@@ -45,13 +45,14 @@ impl Lexer {
 
         let mut tokens: Vec<Token> = vec![];
         let mut slice_start_index = 0;
-        let mut previous_char = ' ';
+        // Whether the previous char is a backslash that still escapes this one
+        let mut escaping = false;
 
         for (current_index, c) in src.char_indices() {
             match c {
                 // TODO: Handle char over code 127 for escaped chars
                 // Handle Escaped chars : "\" + any charcode below 127
-                '{' | '}' | '\\' | '\n' if previous_char == '\\' => {}
+                '{' | '}' | '\\' | '\n' if escaping => {}
                 '{' | '}' | '\\' | '\n' => {
                     // End of slice chars
                     if slice_start_index < current_index {
@@ -66,7 +67,8 @@ impl Lexer {
                 // Others chars
                 _ => {}
             }
-            previous_char = c;
+            // An escaped backslash escapes nothing itself, so the "}" in "\\}" still closes a group
+            escaping = c == '\\' && !escaping;
         }
         // Manage last token (should always be "}")
         if slice_start_index < src.len() {
@@ -187,6 +189,23 @@ pub(crate) mod tests {
                 ControlSymbol((Par, None)),
                 ClosingBracket,
             ]
+        );
+    }
+
+    #[test]
+    fn scan_escaped_backslash_before_closing_bracket() {
+        let tokens = Lexer::scan(r#"{\f0 C:\\}after}"#);
+        assert_eq!(
+            tokens.unwrap(),
+            vec![
+                OpeningBracket,
+                ControlSymbol((FontNumber, Value(0))),
+                PlainText("C:"),
+                PlainText("\\"),
+                ClosingBracket,
+                PlainText("after"),
+                ClosingBracket
+            ],
         );
     }
 
