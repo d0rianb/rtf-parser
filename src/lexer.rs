@@ -81,6 +81,23 @@ impl Lexer {
         return Ok(tokens);
     }
 
+    /// Splits a control word and its optional signed number from trailing text
+    /// Skips one delimiting whitespace and removes a trailing semicolon from the control word
+    fn split_control_word(slice: &str) -> (&str, &str) {
+        let (ident, mut tail) = slice.split_first_whitespace();
+        let mut ident = ident.strip_suffix(';').unwrap_or(ident);
+        let name_end = 1 + ident.bytes().skip(1).take_while(u8::is_ascii_alphabetic).count();
+        let parameter = &ident[name_end..];
+        let digits = parameter.strip_prefix('-').unwrap_or(parameter).bytes().take_while(u8::is_ascii_digit).count();
+        let parameter_end = name_end + usize::from(parameter.starts_with('-')) + digits;
+        if digits > 0 && parameter_end < ident.len() {
+            // A non-digit ends the parameter; keep the remaining source as text.
+            ident = &slice[..parameter_end];
+            tail = &slice[parameter_end..];
+        }
+        return (ident, tail);
+    }
+
     /// Get a string slice cut but the scanner and return the coreesponding token(s)
     fn tokenize(slice: &str) -> Result<Vec<Token<'_>>, LexerError> {
         let mut starting_chars = slice.trim_matches(' ').chars().take(2);
@@ -114,9 +131,7 @@ impl Lexer {
                 'a'..='z' => {
                     // Identify control word
                     // ex: parse "\b Words in bold" -> (Token::ControlWord(ControlWord::Bold), Token::ControlWordArgument("Words in bold")
-                    let (mut ident, tail) = slice.split_first_whitespace();
-                    // if ident end with semicolon, strip it for correct value parsing
-                    ident = if ident.chars().last().unwrap_or(' ') == ';' { &ident[0..ident.len() - 1] } else { ident };
+                    let (ident, tail) = Self::split_control_word(slice);
                     let control_word = ControlWord::from(ident)?;
                     let mut ret = vec![Token::ControlSymbol(control_word)];
                     recursive_tokenize!(tail, ret);
