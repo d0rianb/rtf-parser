@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
         };
     }
 
-    pub fn get_tokens(&self) -> Vec<&Token> {
+    pub fn get_tokens(&self) -> Vec<&Token<'_>> {
         // It ignores the empty tokens, that replaced already parsed tokens istead of deleting them for performance reasons
         return self.tokens.iter().filter(|t| *t != &Token::Empty).collect();
     }

@@ -164,7 +164,7 @@ pub enum ControlWord<'a> {
 impl<'a> ControlWord<'a> {
     // https://www.biblioscape.com/rtf15_spec.htm
     // version 1.5 should be compatible with 1.9
-    pub fn from(input: &str) -> Result<ControlSymbol, LexerError> {
+    pub fn from(input: &str) -> Result<ControlSymbol<'_>, LexerError> {
         // Loop backward the string to get the number
         let mut it = input.chars().rev();
         let mut suffix_index = 0;

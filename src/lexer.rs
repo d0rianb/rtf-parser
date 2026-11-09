@@ -40,7 +40,7 @@ impl From<std::num::ParseIntError> for LexerError {
 pub struct Lexer;
 
 impl Lexer {
-    pub fn scan(src: &str) -> Result<Vec<Token>, LexerError> {
+    pub fn scan(src: &str) -> Result<Vec<Token<'_>>, LexerError> {
         let src = src.trim(); // Sanitize src : Trim the leading whitespaces
 
         let mut tokens: Vec<Token> = vec![];
@@ -82,7 +82,7 @@ impl Lexer {
     }
 
     /// Get a string slice cut but the scanner and return the coreesponding token(s)
-    fn tokenize(slice: &str) -> Result<Vec<Token>, LexerError> {
+    fn tokenize(slice: &str) -> Result<Vec<Token<'_>>, LexerError> {
         let mut starting_chars = slice.trim_matches(' ').chars().take(2);
         return match (starting_chars.next(), starting_chars.next()) {
             // If it starts with \ : escaped text or control word
