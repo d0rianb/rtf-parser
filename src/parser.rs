@@ -246,7 +246,7 @@ impl<'a> Parser<'a> {
                                 let mut ignore_mask_iter = ignore_mask.iter();
                                 unicodes.retain(|_| *ignore_mask_iter.next().unwrap());
                                 // Convert the unicode to string
-                                let str = String::from_utf16(unicodes.as_slice()).unwrap();
+                                let str = String::from_utf16_lossy(unicodes.as_slice());
                                 Self::add_text_to_document(&str, &state_stack, &mut document)?;
                             }
                         }
@@ -751,6 +751,15 @@ pub mod tests {
         let tokens = Lexer::scan(rtf).unwrap();
         let document = Parser::new(tokens).parse().unwrap();
         assert_eq!(&document.body[0].text, "啊 啊");
+    }
+
+    #[test]
+    fn parse_unpaired_surrogate() {
+        let rtf = r"{\rtf1\ansi \u-10187 ?unpaired\par}";
+        let document = RtfDocument::try_from(rtf).unwrap();
+        let text = document.get_text();
+        assert!(text.starts_with('\u{FFFD}'));
+        assert!(text.ends_with("unpaired"));
     }
 
     #[test]
